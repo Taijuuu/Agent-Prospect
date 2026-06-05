@@ -310,6 +310,116 @@ def list_prospects(status, city, score_max, limit):
     db.close()
 
 
+@cli.command("export-prospects")
+@click.option("--format", default="excel", type=click.Choice(["excel", "csv"]), help="Format export (excel ou csv)")
+@click.option("--status", default=None, help="Filtrer par statut")
+@click.option("--output", default=None, help="Nom du fichier (défaut: prospects_YYYY-MM-DD.xlsx)")
+def export_prospects(format, status, output):
+    """Exporte les prospects en Excel ou CSV."""
+    init_db()
+    db = get_db()
+
+    s = None
+    if status:
+        try:
+            s = ProspectStatus(status)
+        except ValueError:
+            console.print(f"[red][X][/red] Statut invalide: {status}")
+            return
+
+    prospects = get_prospects(db, status=s, limit=10000)
+
+    if not prospects:
+        console.print("[yellow]Aucun prospect à exporter[/yellow]")
+        return
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d")
+    default_filename = f"prospects_{timestamp}"
+
+    if format == "excel":
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+
+            filename = output or f"{default_filename}.xlsx"
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Prospects"
+
+            headers = ["ID", "Entreprise", "Contact", "Email", "Téléphone", "Secteur", "Adresse", "Ville", "Score Site", "Statut", "Date Création"]
+            ws.append(headers)
+
+            header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            header_font = Font(bold=True, color="FFFFFF")
+
+            for cell in ws[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal="center")
+
+            for prospect in prospects:
+                ws.append([
+                    prospect.id,
+                    prospect.company_name,
+                    prospect.company_name,
+                    prospect.email or "",
+                    prospect.phone or "",
+                    prospect.industry or "",
+                    prospect.address or "",
+                    prospect.city or "",
+                    prospect.website_score or 0,
+                    prospect.status.value if prospect.status else "",
+                    prospect.created_at.strftime("%d/%m/%Y") if prospect.created_at else ""
+                ])
+
+            for col in ws.columns:
+                max_length = 0
+                column = col[0].column_letter
+                for cell in col:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column].width = adjusted_width
+
+            wb.save(filename)
+            console.print(f"[green][OK][/green] {len(prospects)} prospects exportés dans [bold]{filename}[/bold]")
+
+        except ImportError:
+            console.print("[red][X][/red] openpyxl non installé. Installe: pip install openpyxl")
+
+    else:
+        import csv
+        filename = output or f"{default_filename}.csv"
+
+        with open(filename, "w", newline="", encoding="utf-8") as csvfile:
+            fieldnames = ["ID", "Entreprise", "Contact", "Email", "Téléphone", "Secteur", "Adresse", "Ville", "Score Site", "Statut", "Date Création"]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writeheader()
+            for prospect in prospects:
+                writer.writerow({
+                    "ID": prospect.id,
+                    "Entreprise": prospect.company_name,
+                    "Contact": prospect.company_name,
+                    "Email": prospect.email or "",
+                    "Téléphone": prospect.phone or "",
+                    "Secteur": prospect.industry or "",
+                    "Adresse": prospect.address or "",
+                    "Ville": prospect.city or "",
+                    "Score Site": prospect.website_score or 0,
+                    "Statut": prospect.status.value if prospect.status else "",
+                    "Date Création": prospect.created_at.strftime("%d/%m/%Y") if prospect.created_at else ""
+                })
+
+        console.print(f"[green][OK][/green] {len(prospects)} prospects exportés dans [bold]{filename}[/bold]")
+
+    db.close()
+
+
 @cli.command()
 def setup():
     """Guide d'installation interactif."""

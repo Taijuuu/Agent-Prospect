@@ -1,0 +1,7 @@
+ID,Entreprise,Contact,Email,Téléphone,Secteur,Adresse,Ville,Score Site,Statut,Date Création
+1,Restaurant Le Petit Bistro,Restaurant Le Petit Bistro,contact@lepetitbistro.fr,01 23 45 67 89,Restaurants,"42 Rue de la Paix, 75000 Paris",Paris,0,new,05/06/2026
+2,Coiffeur Beauté & Style,Coiffeur Beauté & Style,info@beautystyle.fr,01 44 07 12 34,Salons de coiffure,"128 Boulevard Saint-Germain, 75006 Paris",Paris,45,new,05/06/2026
+3,Plomberie Dupont SARL,Plomberie Dupont SARL,contact@plomberiedupont.fr,06 12 34 56 78,Plombiers,"65 Avenue Foch, 75016 Paris",Paris,0,new,05/06/2026
+4,Électricité Martin & Fils,Électricité Martin & Fils,info@electricitemartin.fr,01 42 61 53 53,Électriciens,"19 Rue de Rivoli, 75004 Paris",Paris,50,new,05/06/2026
+5,Boulangerie Pains Dorés,Boulangerie Pains Dorés,bonjour@painsdores.fr,01 47 07 32 24,Boulangeries,"7 Rue Mouffetard, 75005 Paris",Paris,0,new,05/06/2026
+6,Restaurant La Marée,Restaurant La Marée,reservations@lamaree.fr,01 42 78 99 45,Restaurants,"93 Rue de Turenne, 75003 Paris",Paris,25,new,05/06/2026
