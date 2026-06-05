@@ -46,28 +46,37 @@ def cli():
 @click.option("--sectors", default=None, help="Secteurs séparés par des virgules")
 @click.option("--max-results", default=MAX_PROSPECTS_PER_RUN, type=int)
 @click.option("--dry-run", is_flag=True, help="Affiche sans sauvegarder")
-def prospect(sectors, max_results, dry_run):
-    """Recherche de nouveaux prospects via Explorium."""
-    if not EXPLORIUM_API_KEY:
-        console.print("[red]✗ EXPLORIUM_API_KEY manquante dans .env[/red]")
-        return
-
+@click.option("--demo", is_flag=True, help="Mode démo avec données fictives")
+def prospect(sectors, max_results, dry_run, demo):
+    """Recherche de nouveaux prospects via Explorium (ou démo)."""
     init_db()
     db = get_db()
 
-    sector_list = [s.strip() for s in sectors.split(",")] if sectors else DEFAULT_SECTORS
+    if demo:
+        from prospecting.demo_data import generate_demo_prospects
+        console.print("[bold yellow][DEMO MODE][/bold yellow]")
+        console.print("Utilisation de données fictives pour tester\n")
+        results = generate_demo_prospects(max_results)
+    else:
+        if not EXPLORIUM_API_KEY:
+            console.print("[red][X][/red] EXPLORIUM_API_KEY manquante dans .env")
+            console.print("Conseil: utilise [bold]--demo[/bold] pour tester sans crédit")
+            return
 
-    console.print(f"[bold blue]Recherche Explorium en cours...[/bold blue]")
-    console.print(f"Secteurs: {sector_list}")
+        sector_list = [s.strip() for s in sectors.split(",")] if sectors else DEFAULT_SECTORS
 
-    client = ExploRiumClient()
+        console.print(f"[bold blue]Recherche Explorium en cours...[/bold blue]")
+        console.print(f"Secteurs: {sector_list}")
+
+        client = ExploRiumClient()
+
+        results = client.run_full_search(
+            sectors=sector_list,
+            countries=["fr"],
+            max_per_sector=max_results // len(sector_list) if sector_list else max_results
+        )
+
     analyzer = WebsiteAnalyzer()
-
-    results = client.run_full_search(
-        sectors=sector_list,
-        countries=["fr"],
-        max_per_sector=max_results // len(sector_list) if sector_list else max_results
-    )
 
     console.print(f"[green]{len(results)} entreprises trouvées[/green]")
 
@@ -87,14 +96,17 @@ def prospect(sectors, max_results, dry_run):
             skipped += 1
             continue
 
-        analysis = analyzer.analyze(domain) if domain else {"score": 0, "issues": ["Aucun site web"], "cms": None}
+        if "website_score" in business:
+            analysis = {"score": business.get("website_score"), "issues": business.get("website_issues", []), "cms": None}
+        else:
+            analysis = analyzer.analyze(domain) if domain else {"score": 0, "issues": ["Aucun site web"], "cms": None}
 
         if not analyzer.is_worth_contacting(analysis["score"]):
             skipped += 1
             continue
 
         prospects_list = business.get("prospects", [])
-        email = prospects_list[0].get("email") if prospects_list else ""
+        email = business.get("email") or (prospects_list[0].get("email") if prospects_list else "")
 
         prospect_data = {
             "company_name": company_name,
@@ -105,8 +117,8 @@ def prospect(sectors, max_results, dry_run):
             "email": email or "",
             "website_url": domain or "",
             "website_score": analysis["score"],
-            "website_issues": json.dumps(analysis["issues"], ensure_ascii=False),
-            "source": "explorium",
+            "website_issues": json.dumps(business.get("website_issues") or analysis["issues"], ensure_ascii=False),
+            "source": "demo" if demo else "explorium",
             "status": ProspectStatus.new
         }
 
@@ -121,14 +133,20 @@ def prospect(sectors, max_results, dry_run):
 
 
 @cli.command("validate-templates")
-def validate_templates():
+@click.option("--demo", is_flag=True, help="Utiliser les templates de démo (sans API Claude)")
+def validate_templates(demo):
     """Générer et valider les 2 templates d'email (une seule fois)."""
     init_template_db()
     db = get_db()
 
-    console.print("[bold blue]Génération des templates par Claude...[/bold blue]\n")
-
-    templates = generate_email_templates()
+    if demo:
+        from email_agent.demo_templates import DEMO_TEMPLATES
+        console.print("[bold yellow][TEMPLATES DE DEMO][/bold yellow]")
+        console.print("Utilisation des templates prédéfinis pour tester\n")
+        templates = DEMO_TEMPLATES
+    else:
+        console.print("[bold blue]Génération des templates par Claude...[/bold blue]\n")
+        templates = generate_email_templates()
 
     no_website = templates.get("no_website", {})
     bad_website = templates.get("bad_website", {})
@@ -136,17 +154,17 @@ def validate_templates():
     console.print("[bold green]=== TEMPLATE 1 : Entreprises SANS SITE WEB ===[/bold green]")
     console.print(f"Objet: {no_website.get('subject', '')}\n")
     console.print(f"Corps:\n{no_website.get('body', '')}\n")
-    console.print("[yellow]─" * 60 + "[/yellow]\n")
+    console.print("[yellow]" + "-" * 60 + "[/yellow]\n")
 
     console.print("[bold green]=== TEMPLATE 2 : Entreprises AVEC SITE MÉDIOCRE ===[/bold green]")
     console.print(f"Objet: {bad_website.get('subject', '')}\n")
     console.print(f"Corps:\n{bad_website.get('body', '')}\n")
-    console.print("[yellow]─" * 60 + "[/yellow]\n")
+    console.print("[yellow]" + "-" * 60 + "[/yellow]\n")
 
-    if click.confirm("Validez-vous ces 2 templates ?"):
+    if demo or click.confirm("Validez-vous ces 2 templates ?"):
         get_or_create_templates(db, "no_website", no_website.get("subject", ""), no_website.get("body", ""))
         get_or_create_templates(db, "bad_website", bad_website.get("subject", ""), bad_website.get("body", ""))
-        console.print("[green]✓ Templates sauvegardés et validés![/green]")
+        console.print("[green][OK] Templates sauvegardés et validés![/green]")
     else:
         console.print("[yellow]Validation annulée. Relancez cette commande pour réessayer.[/yellow]")
 
