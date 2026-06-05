@@ -1,0 +1,8 @@
+Objet : {subject}
+
+Bonjour,
+
+{body}
+
+---
+Si vous ne souhaitez pas être recontacté, répondez simplement "Stop".
