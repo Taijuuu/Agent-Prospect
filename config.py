@@ -3,8 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+TEST_MODE = os.getenv("TEST_MODE", "False").lower() == "true"
+
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 EXPLORIUM_API_KEY = os.getenv("EXPLORIUM_API_KEY", "")
+GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
 
 GMAIL_CREDENTIALS_FILE = os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json")
 GMAIL_TOKEN_FILE = os.getenv("GMAIL_TOKEN_FILE", "token.json")

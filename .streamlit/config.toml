@@ -1,0 +1,16 @@
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"
+trackScriptHashesInSessionState = false
+
+[logger]
+level = "error"
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
+
+[server]
+headless = true
+runOnSave = true

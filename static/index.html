@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Prospection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f9fafb;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .container { display: flex; height: 100vh; }
+
+        .sidebar {
+            width: 260px;
+            background: #fff;
+            border-right: 1px solid #e5e7eb;
+            padding: 25px 0;
+            overflow-y: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            padding: 0 20px 25px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #2563eb;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 25px;
+            letter-spacing: -0.5px;
+        }
+
+        .menu { list-style: none; }
+        .menu-section { padding: 15px 0; }
+
+        .menu-section-title {
+            padding: 0 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
+        }
+
+        .menu a {
+            display: block;
+            padding: 10px 20px;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .menu a:hover {
+            color: #2563eb;
+            background: #f3f4f6;
+        }
+
+        .menu a.active {
+            color: #2563eb;
+            background: #eff6ff;
+            border-left: 3px solid #2563eb;
+            padding-left: 17px;
+            font-weight: 600;
+        }
+
+        .main { flex: 1; display: flex; flex-direction: column; }
+
+        .header {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 { font-size: 22px; font-weight: 700; }
+        .header-left p { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+        .header-right { display: flex; gap: 10px; }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .page-header { margin-bottom: 30px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .page-header p { font-size: 14px; color: #6b7280; }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .action-card {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .action-card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(37, 99, 235, 0.2); }
+        .action-card.secondary { background: #f3f4f6; color: #2563eb; }
+        .action-card.secondary:hover { background: #e5e7eb; }
+
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+
+        .stat {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 24px;
+            transition: all 0.2s;
+            border-left: 4px solid #2563eb;
+        }
+
+        .stat:nth-child(2) { border-left-color: #16a34a; }
+        .stat:nth-child(3) { border-left-color: #d97706; }
+        .stat:nth-child(4) { border-left-color: #7c3aed; }
+
+        .stat:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+        .stat-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .stat-icon { font-size: 24px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 8px; }
+        .stat-trend { font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 4px; background: #dcfce7; color: #16a34a; }
+
+        .stat-value { font-size: 32px; font-weight: 700; color: #1f2937; margin-bottom: 8px; }
+        .stat-label { font-size: 13px; color: #6b7280; font-weight: 500; margin-bottom: 12px; }
+
+        .stat-bar {
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            background: #2563eb;
+            border-radius: 2px;
+        }
+
+        .stat:nth-child(2) .stat-bar-fill { background: #16a34a; }
+        .stat:nth-child(3) .stat-bar-fill { background: #d97706; }
+        .stat:nth-child(4) .stat-bar-fill { background: #7c3aed; }
+
+        .card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        .card-header h2 { font-size: 15px; font-weight: 600; }
+
+        .card-body { padding: 20px; }
+
+        .table-wrapper { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f9fafb;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        tr:nth-child(even) { background: #fafbfc; }
+        tr:hover { background: #f3f4f6; }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            color: white;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+
+        .avatar.blue { background: linear-gradient(135deg, #2563eb, #1e40af); }
+        .avatar.green { background: linear-gradient(135deg, #16a34a, #15803d); }
+        .avatar.orange { background: linear-gradient(135deg, #d97706, #b45309); }
+        .avatar.purple { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+
+        .company-name { display: flex; align-items: center; }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge.new { background: #dbeafe; color: #1e40af; }
+        .badge.contacted { background: #fed7aa; color: #92400e; }
+        .badge.replied { background: #dcfce7; color: #15803d; }
+        .badge.converted { background: #e9d5ff; color: #6b21a8; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #1f2937;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232563eb' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 32px;
+        }
+
+        select:hover { border-color: #2563eb; }
+        select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        input:focus, textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+        textarea { min-height: 200px; resize: vertical; }
+
+        .btn {
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn:hover { background: #1e40af; }
+        .btn:active { transform: scale(0.98); }
+
+        .btn-secondary { background: #6b7280; }
+        .btn-secondary:hover { background: #4b5563; }
+
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .alert { padding: 12px 16px; margin-bottom: 15px; border-radius: 6px; border-left: 3px solid #ddd; display: none; font-size: 13px; }
+        .alert.show { display: block; }
+        .alert.success { background: #dcfce7; border-left-color: #16a34a; color: #15803d; }
+        .alert.error { background: #fee2e2; border-left-color: #dc2626; color: #991b1b; }
+
+        .empty { color: #6b7280; padding: 40px; text-align: center; font-size: 13px; }
+
+        .loading { color: #6b7280; font-size: 13px; display: none; text-align: center; padding: 30px; }
+        .loading.show { display: block; }
+
+        .spinner {
+            border: 2px solid #e5e7eb;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal.show { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: #fff; border-radius: 8px; padding: 30px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+        .modal-close { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; }
+        .modal-close:hover { color: #1f2937; }
+
+        .split-view { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .preview { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; }
+        .preview h4 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #6b7280; }
+        .preview-content { font-size: 12px; line-height: 1.6; color: #4b5563; }
+
+        .variables-list {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .variable-chip {
+            padding: 6px 12px;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .variable-chip:hover { background: #dbeafe; border-color: #2563eb; }
+
+        .text-char-count { font-size: 12px; color: #9ca3af; margin-top: 6px; }
+
+        @media (max-width: 1024px) {
+            .split-view { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; max-height: 200px; padding: 15px; overflow-x: auto; }
+            .menu { display: flex; gap: 10px; }
+            .menu-section { padding: 0; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo">ProspectIA</div>
+
+            <div class="menu-section">
+                <ul class="menu">
+                    <li><a onclick="switchPage('dashboard')" class="nav-link active" data-page="dashboard">Dashboard</a></li>
+                    <li><a onclick="switchPage('prospects')" class="nav-link" data-page="prospects">Prospects</a></li>
+                    <li><a onclick="switchPage('search')" class="nav-link" data-page="search">Recherche</a></li>
+                    <li><a onclick="switchPage('emails')" class="nav-link" data-page="emails">Emails</a></li>
+                </ul>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">Configuration</div>
+                <ul class="menu">
+                    <li><a onclick="switchPage('mail-templates')" class="nav-link" data-page="mail-templates">Templates</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="header">
+                <div class="header-left">
+                    <h1 id="page-title">Dashboard</h1>
+                    <p id="page-subtitle">Vue d'ensemble de votre prospection</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn" onclick="switchPage('search')">Nouveau prospect</button>
+                </div>
+            </div>
+
+            <div class="content">
+                <div id="alert-container"></div>
+
+                <!-- DASHBOARD -->
+                <div id="dashboard" class="page active">
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-header">
+                                <div style="font-weight: 600; color: #1f2937;">Prospects</div>
+                                <div class="stat-trend">+12%</div>
+                            </div>
+                            <div class="stat-value" id="stat-total">0</div>
+                            <div class="stat-label">Nombre total</div>
+                            <div class="stat-bar"><div class="stat-bar-fill" style="width: 72%;"></div></div>
+                        </div>
+
+                        <div class="stat">
+                            <div class="stat-header">
+                                <div style="font-weight: 600; color: #1f2937;">Emails envoyés</div>
+                                <div class="stat-trend">+8%</div>
+                            </div>
+                            <div class="stat-value" id="stat-sent">0</div>
+                            <div class="stat-label">Ce mois</div>
+                            <div class="stat-bar"><div class="stat-bar-fill" style="width: 58%;"></div></div>
+                        </div>
+
+                        <div class="stat">
+                            <div class="stat-header">
+                                <div style="font-weight: 600; color: #1f2937;">Réponses</div>
+                                <div class="stat-trend">+4%</div>
+                            </div>
+                            <div class="stat-value" id="stat-replied">0</div>
+                            <div class="stat-label">Clients intéressés</div>
+                            <div class="stat-bar"><div class="stat-bar-fill" style="width: 38%;"></div></div>
+                        </div>
+
+                        <div class="stat">
+                            <div class="stat-header">
+                                <div style="font-weight: 600; color: #1f2937;">Conversions</div>
+                                <div class="stat-trend">+2%</div>
+                            </div>
+                            <div class="stat-value" id="stat-converted">0</div>
+                            <div class="stat-label">Clients signés</div>
+                            <div class="stat-bar"><div class="stat-bar-fill" style="width: 25%;"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Derniers prospects</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="loading show" id="dashboard-loading"><div class="spinner"></div>Chargement...</div>
+                            <div class="table-wrapper" id="dashboard-table"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROSPECTS -->
+                <div id="prospects" class="page">
+                    <div class="page-header">
+                        <h1>Gestion des Prospects</h1>
+                        <p>Consultez et gérez vos prospects</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Rechercher</label>
+                                    <input type="text" id="search-input" placeholder="Nom de l'entreprise">
+                                </div>
+                                <div class="form-group">
+                                    <label>Statut</label>
+                                    <select id="status-filter">
+                                        <option value="">Tous les statuts</option>
+                                        <option value="new">Nouveau</option>
+                                        <option value="contacted">Contacté</option>
+                                        <option value="replied">Répondu</option>
+                                        <option value="converted">Converti</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="btn-group">
+                                <button class="btn" onclick="loadProspects()">Filtrer</button>
+                                <button class="btn btn-secondary" onclick="exportProspects()">Exporter</button>
+                            </div>
+
+                            <div class="loading show" id="prospects-loading"><div class="spinner"></div>Chargement...</div>
+                            <div class="table-wrapper" id="prospects-table"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEARCH -->
+                <div id="search" class="page">
+                    <div class="page-header">
+                        <h1>Chercher des Prospects</h1>
+                        <p>Trouvez des prospects dans votre secteur d'activité</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Secteur</label>
+                                    <select id="search-sector">
+                                        <option value="">Sélectionner</option>
+                                        <option value="restaurant">Restaurant</option>
+                                        <option value="boulangerie">Boulangerie</option>
+                                        <option value="coiffeur">Coiffeur</option>
+                                        <option value="plombier">Plombier</option>
+                                        <option value="electricien">Électricien</option>
+                                        <option value="garage">Garage</option>
+                                        <option value="medical">Médical</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ville</label>
+                                    <select id="search-city">
+                                        <option value="">Sélectionner</option>
+                                        <option value="Paris">Paris</option>
+                                        <option value="Lyon">Lyon</option>
+                                        <option value="Marseille">Marseille</option>
+                                        <option value="Toulouse">Toulouse</option>
+                                        <option value="Nice">Nice</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Nombre max</label>
+                                    <input type="number" id="search-max" value="20" min="5" max="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button class="btn" onclick="startSearch()">Chercher</button>
+                                </div>
+                            </div>
+
+                            <div class="alert" id="search-alert"></div>
+                            <div class="loading" id="search-loading"><div class="spinner"></div>Recherche en cours...</div>
+                            <div id="search-results"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EMAILS -->
+                <div id="emails" class="page">
+                    <div class="page-header">
+                        <h1>Historique des Emails</h1>
+                        <p>Suivi des emails envoyés et reçus</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="loading show" id="emails-loading"><div class="spinner"></div>Chargement...</div>
+                            <div class="table-wrapper" id="emails-table"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MAIL TEMPLATES -->
+                <div id="mail-templates" class="page">
+                    <div class="page-header">
+                        <h1>Templates de Mails</h1>
+                        <p>Personnalisez vos templates par secteur</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Sélectionner un secteur</label>
+                                <select id="template-sector" onchange="loadMailTemplate()" style="width: 100%; max-width: 400px;">
+                                    <option value="">Sélectionner un secteur</option>
+                                    <option value="restaurant">Restaurant</option>
+                                    <option value="boulangerie">Boulangerie</option>
+                                    <option value="coiffeur">Coiffeur</option>
+                                    <option value="plombier">Plombier</option>
+                                    <option value="electricien">Électricien</option>
+                                    <option value="garage">Garage</option>
+                                    <option value="medical">Médical</option>
+                                </select>
+                            </div>
+
+                            <div id="template-content" style="display: none;">
+                                <div class="variables-list">
+                                    <div class="variable-chip" onclick="insertVariable('{{nom_entreprise}}')">{{nom_entreprise}}</div>
+                                    <div class="variable-chip" onclick="insertVariable('{{secteur}}')">{{secteur}}</div>
+                                    <div class="variable-chip" onclick="insertVariable('{{contact}}')">{{contact}}</div>
+                                </div>
+
+                                <div class="split-view">
+                                    <div>
+                                        <div class="form-group">
+                                            <label>Objet du mail</label>
+                                            <input type="text" id="template-subject" placeholder="Objet du mail">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Contenu du mail</label>
+                                            <textarea id="template-body" placeholder="Écrivez votre template de mail ici...&#10;&#10;Utilisez les variables disponibles ci-dessus pour la personnalisation."></textarea>
+                                            <div class="text-char-count"><span id="char-count">0</span>/1000 caractères</div>
+                                        </div>
+
+                                        <div class="btn-group">
+                                            <button class="btn" onclick="saveMailTemplate()">Sauvegarder</button>
+                                            <button class="btn btn-secondary" onclick="testMailTemplate()">Envoyer test</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="preview">
+                                        <h4>Aperçu</h4>
+                                        <div class="preview-content">
+                                            <p><strong>Objet:</strong></p>
+                                            <p id="preview-subject" style="margin-bottom: 20px; color: #2563eb;">-</p>
+                                            <p><strong>Contenu:</strong></p>
+                                            <p id="preview-body">Sélectionnez un secteur</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EMAIL DETAILS -->
+    <div id="email-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeEmailModal()">×</button>
+            <div class="modal-header">Détails du mail</div>
+            <div id="modal-details"></div>
+            <button class="btn" onclick="closeEmailModal()" style="margin-top: 20px;">Fermer</button>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMATION ENVOI -->
+    <div id="confirm-send-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Confirmer l'envoi</div>
+            <p style="margin-bottom: 20px; color: #666;">Êtes-vous sûr de vouloir envoyer un mail à <strong id="confirm-email"></strong> ?</p>
+            <p style="margin-bottom: 20px; padding: 12px; background: #f9fafb; border-left: 3px solid #2563eb;">
+                <strong>Objet:</strong> <span id="confirm-subject"></span>
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="confirmSendEmail()">Oui, envoyer</button>
+                <button class="btn btn-secondary" onclick="closeSendConfirm()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMATION TEMPLATE -->
+    <div id="confirm-template-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Template sauvegardé</div>
+            <p style="margin-bottom: 20px; color: #666;">Le template pour le secteur <strong id="confirm-sector"></strong> a été sauvegardé avec succès.</p>
+            <button class="btn" onclick="closeTemplateConfirm()">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000';
+        let mailTemplates = {
+            restaurant: {
+                subject: 'Augmentez votre visibilité en ligne - {{nom_entreprise}}',
+                body: 'Bonjour {{contact}},\n\nJ\'ai remarqué que votre restaurant {{nom_entreprise}} n\'a pas encore de présence en ligne optimale.\n\nDans le secteur {{secteur}}, une bonne présence numérique permet d\'augmenter la clientèle de 40%.\n\nJe vous propose une solution complète : site web, réservations en ligne, présence sur Google.\n\nPouvons-nous discuter de 15 minutes ?\n\nCordialement,\nTimeo'
+            },
+            boulangerie: {
+                subject: 'Site web pour votre boulangerie - {{nom_entreprise}}',
+                body: 'Bonjour {{contact}},\n\nVotre boulangerie {{nom_entreprise}} mérite une meilleure vitrine en ligne.\n\nDans le secteur {{secteur}}, les clients cherchent les commerces en ligne.\n\nJe propose des sites spécialisés avec présentation des produits, horaires et commandes.\n\nIntéressé pour en discuter ?\n\nCordialement,\nTimeo'
+            },
+            coiffeur: {
+                subject: 'Augmentez vos réservations en ligne',
+                body: 'Bonjour {{contact}},\n\nJe remarque que {{nom_entreprise}} n\'a pas encore de système de réservation en ligne.\n\nCela vous fait perdre des clients qui préfèrent réserver en ligne.\n\nJe vous propose un site avec prise de rendez-vous automatique.\n\nCordialement,\nTimeo'
+            },
+            plombier: {
+                subject: 'Gagnez plus de clients avec un site web',
+                body: 'Bonjour {{contact}},\n\nEn tant que {{secteur}}, vous savez que les clients vous trouvent surtout via Google.\n\nUn site web professionnel pour {{nom_entreprise}} pourrait augmenter vos appels de 50%.\n\nCordialement,\nTimeo'
+            },
+            electricien: {
+                subject: 'Développez votre activité d\'électricien',
+                body: 'Bonjour {{contact}},\n\nComme {{secteur}}, vous avez besoin d\'être visible sur Google pour générer des leads.\n\nUn site web moderne pour {{nom_entreprise}} c\'est plus de clients et une meilleure crédibilité.\n\nCordialement,\nTimeo'
+            },
+            garage: {
+                subject: 'Augmentez vos réservations automobile',
+                body: 'Bonjour {{contact}},\n\nDans le secteur {{secteur}}, les clients attendent une réservation en ligne facile.\n\n{{nom_entreprise}} pourrait doubler son chiffre d\'affaires avec une meilleure présence web.\n\nCordialement,\nTimeo'
+            },
+            medical: {
+                subject: 'Modernisez votre présence en ligne',
+                body: 'Bonjour {{contact}},\n\nDans le secteur {{secteur}}, une bonne présence en ligne rassure les patients.\n\n{{nom_entreprise}} gagnerait à avoir un site professionnel avec prise de rendez-vous.\n\nCordialement,\nTimeo'
+            }
+        };
+
+        function loadTemplatesFromAPI() {
+            fetch(`${API_BASE}/api/templates`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.templates) {
+                        mailTemplates = { ...mailTemplates, ...d.templates };
+                    }
+                })
+                .catch(e => console.log('Templates par défaut utilisés'));
+        }
+
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(page).classList.add('active');
+
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelector(`[data-page="${page}"]`).classList.add('active');
+
+            const titles = {
+                dashboard: 'Tableau de Bord',
+                prospects: 'Gestion des Prospects',
+                search: 'Chercher des Prospects',
+                emails: 'Historique des Emails',
+                'mail-templates': 'Templates de Mails'
+            };
+            const subtitles = {
+                dashboard: 'Vue d\'ensemble de votre prospection',
+                prospects: 'Consultez et gérez vos prospects',
+                search: 'Trouvez des prospects dans votre secteur d\'activité',
+                emails: 'Suivi des emails envoyés et reçus',
+                'mail-templates': 'Personnalisez vos templates par secteur'
+            };
+            document.getElementById('page-title').textContent = titles[page];
+            document.getElementById('page-subtitle').textContent = subtitles[page];
+
+            if (page === 'dashboard') updateDashboard();
+            if (page === 'prospects') loadProspects();
+            if (page === 'emails') loadEmails();
+        }
+
+        function showAlert(msg, type = 'success') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} show`;
+            alert.textContent = msg;
+            document.getElementById('alert-container').innerHTML = '';
+            document.getElementById('alert-container').appendChild(alert);
+            setTimeout(() => alert.remove(), 4000);
+        }
+
+        function updateDashboard() {
+            fetch(`${API_BASE}/api/stats`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('stat-total').textContent = d.total || 0;
+                    document.getElementById('stat-sent').textContent = d.emails_sent || 0;
+                    document.getElementById('stat-replied').textContent = d.replied || 0;
+                    document.getElementById('stat-converted').textContent = d.converted || 0;
+                    loadDashboardProspects();
+                })
+                .catch(() => document.getElementById('dashboard-loading').classList.remove('show'));
+        }
+
+        function loadDashboardProspects() {
+            fetch(`${API_BASE}/api/prospects?limit=10`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('dashboard-loading').classList.remove('show');
+                    if (!d.prospects.length) { document.getElementById('dashboard-table').innerHTML = '<p class="empty">Aucun prospect</p>'; return; }
+                    let h = '<table><thead><tr><th>Entreprise</th><th>Email</th><th>Téléphone</th><th>Secteur</th><th>Statut</th><th>Action</th></tr></thead><tbody>';
+                    const colors = ['blue', 'green', 'orange', 'purple'];
+                    d.prospects.forEach((p, i) => {
+                        const initials = p.company_name.substring(0, 2).toUpperCase();
+                        h += `<tr><td><div class="company-name"><div class="avatar ${colors[i % 4]}">${initials}</div>${p.company_name}</div></td><td>${p.email || '-'}</td><td>${p.phone || '-'}</td><td>${p.industry || '-'}</td><td><span class="badge ${p.status}">${p.status}</span></td><td><button class="btn" style="padding:6px 12px; font-size:12px;" onclick="sendEmailToProspect(${p.id}, '${p.company_name}', '${p.industry}', '${p.email}')">Envoyer</button></td></tr>`;
+                    });
+                    h += '</tbody></table>';
+                    document.getElementById('dashboard-table').innerHTML = h;
+                })
+                .catch(err => {
+                    document.getElementById('dashboard-loading').classList.remove('show');
+                    console.error('Erreur loadDashboardProspects:', err);
+                });
+        }
+
+        function loadProspects() {
+            document.getElementById('prospects-loading').classList.add('show');
+            const status = document.getElementById('status-filter').value;
+            fetch(`${API_BASE}/api/prospects?status=${status}&limit=100`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('prospects-loading').classList.remove('show');
+                    if (!d.prospects.length) { document.getElementById('prospects-table').innerHTML = '<p class="empty">Aucun prospect</p>'; return; }
+                    let h = '<table><thead><tr><th>Entreprise</th><th>Email</th><th>Téléphone</th><th>Secteur</th><th>Ville</th><th>Score</th><th>Statut</th><th>Action</th></tr></thead><tbody>';
+                    const colors = ['blue', 'green', 'orange', 'purple'];
+                    d.prospects.forEach((p, i) => {
+                        const initials = p.company_name.substring(0, 2).toUpperCase();
+                        h += `<tr><td><div class="company-name"><div class="avatar ${colors[i % 4]}">${initials}</div>${p.company_name}</div></td><td>${p.email || '-'}</td><td>${p.phone || '-'}</td><td>${p.industry || '-'}</td><td>${p.city || '-'}</td><td>${p.website_score}/100</td><td><span class="badge ${p.status}">${p.status}</span></td><td><button class="btn" style="padding:6px 12px; font-size:12px;" onclick="sendEmailToProspect(${p.id}, '${p.company_name}', '${p.industry}', '${p.email}')">Envoyer</button></td></tr>`;
+                    });
+                    h += '</tbody></table>';
+                    document.getElementById('prospects-table').innerHTML = h;
+                })
+                .catch(err => {
+                    document.getElementById('prospects-loading').classList.remove('show');
+                    console.error('Erreur loadProspects:', err);
+                });
+        }
+
+        function startSearch() {
+            const sector = document.getElementById('search-sector').value;
+            const city = document.getElementById('search-city').value;
+            if (!sector || !city) { showAlert('Sélectionnez un secteur et une ville', 'error'); return; }
+            document.getElementById('search-loading').classList.add('show');
+            fetch(`${API_BASE}/api/search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sector, city, max_results: parseInt(document.getElementById('search-max').value) })
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('search-loading').classList.remove('show');
+                if (d.success) { showAlert(`${d.saved} prospects sauvegardés`); updateDashboard(); }
+                else { showAlert('Erreur: ' + d.error, 'error'); }
+            });
+        }
+
+        function loadEmails() {
+            document.getElementById('emails-loading').classList.add('show');
+            fetch(`${API_BASE}/api/emails?direction=sent&limit=50`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('emails-loading').classList.remove('show');
+                    if (!d.emails.length) { document.getElementById('emails-table').innerHTML = '<p class="empty">Aucun email envoyé</p>'; return; }
+                    let h = '<table><thead><tr><th>Email</th><th>Entreprise</th><th>Secteur</th><th>Objet</th><th>Date</th><th>Action</th></tr></thead><tbody>';
+                    d.emails.forEach(e => {
+                        const date = new Date(e.sent_at).toLocaleDateString('fr-FR');
+                        h += `<tr><td>${e.email}</td><td>${e.company_name}</td><td>${e.industry}</td><td>${e.subject}</td><td>${date}</td><td><button class="btn" style="padding:6px 12px; font-size:12px;" onclick="showEmailDetails(${e.prospect_id}, '${e.company_name}', '${e.industry}')">Voir</button></td></tr>`;
+                    });
+                    h += '</tbody></table>';
+                    document.getElementById('emails-table').innerHTML = h;
+                })
+                .catch(err => {
+                    document.getElementById('emails-loading').classList.remove('show');
+                    document.getElementById('emails-table').innerHTML = '<p class="empty">Erreur: ' + err.message + '</p>';
+                });
+        }
+
+        function showEmailDetails(id, company, sector) {
+            const template = mailTemplates[sector] || { subject: 'Objet', body: 'Contenu' };
+            document.getElementById('modal-details').innerHTML = `
+                <p style="margin-bottom: 15px;"><strong>Entreprise:</strong> ${company}</p>
+                <p style="margin-bottom: 15px;"><strong>Secteur:</strong> ${sector}</p>
+                <p style="margin-bottom: 8px;"><strong>Objet:</strong></p>
+                <p style="margin-bottom: 20px; background: #f9fafb; padding: 12px; border-radius: 6px; border-left: 3px solid #2563eb;">${template.subject}</p>
+                <p style="margin-bottom: 8px;"><strong>Contenu:</strong></p>
+                <p style="background: #f9fafb; padding: 12px; border-radius: 6px; white-space: pre-wrap; border-left: 3px solid #2563eb;">${template.body}</p>
+            `;
+            document.getElementById('email-modal').classList.add('show');
+        }
+
+        function closeEmailModal() { document.getElementById('email-modal').classList.remove('show'); }
+
+        function loadMailTemplate() {
+            const sector = document.getElementById('template-sector').value;
+            if (!sector) { document.getElementById('template-content').style.display = 'none'; return; }
+            const template = mailTemplates[sector];
+            document.getElementById('template-subject').value = template.subject;
+            document.getElementById('template-body').value = template.body;
+            updatePreview();
+            document.getElementById('template-content').style.display = 'block';
+        }
+
+        function updatePreview() {
+            const subject = document.getElementById('template-subject').value || '-';
+            const body = document.getElementById('template-body').value || '-';
+            document.getElementById('preview-subject').textContent = subject;
+            document.getElementById('preview-body').textContent = body;
+            document.getElementById('char-count').textContent = body.length;
+        }
+
+        function insertVariable(variable) {
+            const textarea = document.getElementById('template-body');
+            textarea.value += variable;
+            updatePreview();
+            textarea.focus();
+        }
+
+        function saveMailTemplate() {
+            const sector = document.getElementById('template-sector').value;
+            const subject = document.getElementById('template-subject').value;
+            const body = document.getElementById('template-body').value;
+
+            if (!sector) {
+                showAlert('Sélectionnez d\'abord un secteur', 'error');
+                return;
+            }
+            if (!subject || !body) {
+                showAlert('Veuillez remplir l\'objet et le contenu', 'error');
+                return;
+            }
+
+            fetch(`${API_BASE}/api/template/${sector}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject, body })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    mailTemplates[sector] = { subject, body };
+                    document.getElementById('confirm-sector').textContent = sector;
+                    document.getElementById('confirm-template-modal').classList.add('show');
+                } else {
+                    showAlert('Erreur: ' + d.error, 'error');
+                }
+            })
+            .catch(e => showAlert('Erreur: ' + e.message, 'error'));
+        }
+
+        function closeTemplateConfirm() {
+            document.getElementById('confirm-template-modal').classList.remove('show');
+        }
+
+        function testMailTemplate() {
+            const sector = document.getElementById('template-sector').value;
+            const subject = document.getElementById('template-subject').value;
+            const body = document.getElementById('template-body').value;
+
+            if (!sector || !subject || !body) {
+                showAlert('Remplissez d\'abord tous les champs', 'error');
+                return;
+            }
+
+            fetch(`${API_BASE}/api/send-test-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sector: sector,
+                    subject: subject,
+                    body: body
+                })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    showAlert('Email de test envoyé et enregistré!');
+                    loadEmails();
+                } else {
+                    showAlert('Erreur: ' + (d.error || 'Impossible d\'envoyer le test'), 'error');
+                }
+            })
+            .catch(err => showAlert('Erreur: ' + err.message, 'error'));
+        }
+
+        let pendingEmail = null;
+
+        function sendEmailToProspect(prospectId, company, sector, email) {
+            if (!email || email === '-') { showAlert('Pas d\'email pour ce prospect', 'error'); return; }
+            const template = mailTemplates[sector] || mailTemplates.restaurant;
+
+            pendingEmail = {
+                prospectId: prospectId,
+                company: company,
+                sector: sector,
+                email: email,
+                subject: template.subject,
+                body: template.body
+            };
+
+            document.getElementById('confirm-email').textContent = email;
+            document.getElementById('confirm-subject').textContent = template.subject;
+            document.getElementById('confirm-send-modal').classList.add('show');
+        }
+
+        function confirmSendEmail() {
+            if (!pendingEmail) return;
+
+            closeSendConfirm();
+            document.body.style.pointerEvents = 'none';
+
+            fetch(`${API_BASE}/api/send-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prospect_id: pendingEmail.prospectId,
+                    subject: pendingEmail.subject,
+                    body: pendingEmail.body
+                })
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.body.style.pointerEvents = 'auto';
+                if (d.success) {
+                    showAlert('Email enregistré avec succès!');
+                    loadEmails();
+                    updateDashboard();
+                    pendingEmail = null;
+                } else {
+                    showAlert('Erreur: ' + (d.error || 'Impossible d\'envoyer l\'email'), 'error');
+                }
+            })
+            .catch(err => {
+                document.body.style.pointerEvents = 'auto';
+                showAlert('Erreur réseau: ' + err.message, 'error');
+            });
+        }
+
+        function closeSendConfirm() {
+            document.getElementById('confirm-send-modal').classList.remove('show');
+            pendingEmail = null;
+        }
+
+        function exportProspects() { window.location.href = `${API_BASE}/api/export?format=xlsx`; }
+
+        document.getElementById('template-body')?.addEventListener('input', updatePreview);
+
+        console.log('Interface initialisée - Vérification des liaisons');
+        console.log('API_BASE:', API_BASE);
+        loadTemplatesFromAPI();
+        updateDashboard();
+        setInterval(updateDashboard, 30000);
+    </script>
+</body>
+</html>

@@ -10,13 +10,13 @@ from rich.console import Console
 from rich.table import Table
 from sqlalchemy.orm import sessionmaker
 
-from config import DEFAULT_CITIES, DEFAULT_SECTORS, MAX_PROSPECTS_PER_RUN, LOG_FILE, EXPLORIUM_API_KEY
+from config import DEFAULT_CITIES, DEFAULT_SECTORS, MAX_PROSPECTS_PER_RUN, LOG_FILE
 from database.models import get_engine, init_db, ProspectStatus
 from database.crud import (
     create_prospect, get_prospects, get_stats,
     prospect_exists, count_emails_sent_today
 )
-from prospecting.explorium_client import ExploRiumClient
+from prospecting.finder import ProspectFinder
 from prospecting.website_analyzer import WebsiteAnalyzer
 from email_agent.email_writer import generate_email_templates
 from email_agent.email_templates import (
@@ -58,22 +58,19 @@ def prospect(sectors, max_results, dry_run, demo):
         console.print("Utilisation de données fictives pour tester\n")
         results = generate_demo_prospects(max_results)
     else:
-        if not EXPLORIUM_API_KEY:
-            console.print("[red][X][/red] EXPLORIUM_API_KEY manquante dans .env")
-            console.print("Conseil: utilise [bold]--demo[/bold] pour tester sans crédit")
-            return
-
         sector_list = [s.strip() for s in sectors.split(",")] if sectors else DEFAULT_SECTORS
+        city_list = ["Paris", "Lyon", "Marseille", "Toulouse", "Nice"]
 
-        console.print(f"[bold blue]Recherche Explorium en cours...[/bold blue]")
+        console.print(f"[bold blue]Recherche prospects en cours...[/bold blue]")
         console.print(f"Secteurs: {sector_list}")
+        console.print(f"Villes: {city_list}\n")
 
-        client = ExploRiumClient()
+        finder = ProspectFinder()
 
-        results = client.run_full_search(
+        results = finder.run_full_search(
             sectors=sector_list,
-            countries=["fr"],
-            max_per_sector=max_results // len(sector_list) if sector_list else max_results
+            cities=city_list,
+            max_per_combo=max_results // (len(sector_list) * len(city_list)) if sector_list else max_results
         )
 
     analyzer = WebsiteAnalyzer()
@@ -84,10 +81,10 @@ def prospect(sectors, max_results, dry_run, demo):
     skipped = 0
 
     for business in results:
-        company_name = business.get("company_name", "").strip()
+        company_name = business.get("name", "").strip()
         city = business.get("city", "").strip()
-        domain = business.get("domain", "")
-        phone = business.get("phone")
+        domain = business.get("website", "")
+        phone = business.get("phone", "")
 
         if not company_name:
             continue
@@ -105,8 +102,7 @@ def prospect(sectors, max_results, dry_run, demo):
             skipped += 1
             continue
 
-        prospects_list = business.get("prospects", [])
-        email = business.get("email") or (prospects_list[0].get("email") if prospects_list else "")
+        email = ""
 
         prospect_data = {
             "company_name": company_name,
@@ -117,8 +113,8 @@ def prospect(sectors, max_results, dry_run, demo):
             "email": email or "",
             "website_url": domain or "",
             "website_score": analysis["score"],
-            "website_issues": json.dumps(business.get("website_issues") or analysis["issues"], ensure_ascii=False),
-            "source": "demo" if demo else "explorium",
+            "website_issues": json.dumps(analysis["issues"], ensure_ascii=False),
+            "source": "finder_duckduckgo",
             "status": ProspectStatus.new
         }
 
