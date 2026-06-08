@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 import traceback
 
-from database.models import get_engine, init_db, ProspectStatus, EmailLog
+from database.models import get_engine, init_db, ProspectStatus, EmailLog, EmailDirection
 from database.crud import (
     get_prospects, get_stats, create_prospect, get_prospect,
     count_emails_sent_today, get_prospects_for_followup, create_email_log
@@ -229,7 +229,7 @@ def send_email_api():
                     body_html=body,
                     body_text=body
                 )
-                gmail_message_id = result.get('id', f'email_{prospect_id}')
+                gmail_message_id = result.get('message_id', f'email_{prospect_id}')
                 print(f"Email envoyé à {prospect_email} (ID: {gmail_message_id})")
             except Exception as e:
                 print(f"Erreur envoi Gmail: {e}")
@@ -240,7 +240,7 @@ def send_email_api():
 
         create_email_log(db, {
             'prospect_id': prospect_id,
-            'direction': 'sent',
+            'direction': EmailDirection.sent,
             'subject': subject,
             'body': body,
             'sent_at': datetime.now(),
@@ -407,7 +407,7 @@ def send_test_email_api():
                     body_html=body,
                     body_text=body
                 )
-                gmail_message_id = result.get('id', f'test_email_{sector}')
+                gmail_message_id = result.get('message_id', f'test_email_{sector}')
                 print(f"Email de test envoyé à {test_email}")
             except Exception as e:
                 print(f"Erreur envoi test: {e}")
@@ -416,7 +416,7 @@ def send_test_email_api():
         db = get_db()
         create_email_log(db, {
             'prospect_id': None,
-            'direction': 'sent',
+            'direction': EmailDirection.sent,
             'subject': f"[TEST - {sector}] {subject}",
             'body': body,
             'sent_at': datetime.now(),
@@ -491,7 +491,7 @@ def test_api():
     return jsonify({'status': 'ok', 'message': 'API is working'})
 
 if __name__ == '__main__':
-    print("Démarrage du serveur sur http://127.0.0.1:5000")
+    print("Démarrage du serveur sur http://127.0.0.1:8080")
     print("API endpoints disponibles:")
     print("  GET  /api/stats")
     print("  GET  /api/prospects")
@@ -502,4 +502,4 @@ if __name__ == '__main__':
     print("  GET  /api/emails")
     print("  GET  /api/export")
     print("  GET  /api/test")
-    app.run(debug=False, port=5000, host='127.0.0.1', use_reloader=False)
+    app.run(debug=False, port=8080, host='127.0.0.1', use_reloader=False)

@@ -422,7 +422,7 @@ def setup():
     console.print("[bold blue]=== Configuration de l'agent de prospection ===[/bold blue]\n")
 
     console.print("[bold]Étape 1: Vérification des clés API[/bold]")
-    from config import ANTHROPIC_API_KEY, GMAIL_SENDER_EMAIL
+    from config import ANTHROPIC_API_KEY, EXPLORIUM_API_KEY, GMAIL_SENDER_EMAIL
 
     if ANTHROPIC_API_KEY:
         console.print("[green][OK][/green] ANTHROPIC_API_KEY configurée")
