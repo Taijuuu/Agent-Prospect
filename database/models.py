@@ -52,7 +52,7 @@ class EmailLog(Base):
     __tablename__ = "email_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    prospect_id = Column(Integer, ForeignKey("prospects.id"), nullable=False)
+    prospect_id = Column(Integer, ForeignKey("prospects.id"), nullable=True)
     gmail_message_id = Column(String(255))
     gmail_thread_id = Column(String(255))
     direction = Column(SAEnum(EmailDirection), nullable=False)

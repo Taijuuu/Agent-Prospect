@@ -437,38 +437,50 @@ def send_test_email_api():
 
 @app.route('/api/templates', methods=['GET'])
 def get_templates_api():
+    db = None
     try:
-        from email_agent.email_templates import get_or_create_templates
+        from email_agent.email_templates import EmailTemplate
         db = get_db()
-        templates = get_or_create_templates(db)
+        templates = db.query(EmailTemplate).all()
         result = {}
         for t in templates:
             result[t.template_type] = {
                 'subject': t.subject,
                 'body': t.body
             }
-        db.close()
         return jsonify({'templates': result})
     except Exception as e:
         print(f"Erreur /api/templates: {e}")
-        return jsonify({'error': str(e)}), 500
+        print(traceback.format_exc())
+        return jsonify({'templates': {}})
+    finally:
+        if db:
+            db.close()
 
 @app.route('/api/template/<sector>', methods=['POST'])
 def save_template_api(sector):
     db = None
     try:
-        from email_agent.email_templates import update_template
+        from email_agent.email_templates import EmailTemplate
         data = request.json
         subject = data.get('subject', '')
         body = data.get('body', '')
 
         db = get_db()
-        update_template(db, sector, subject, body)
-        db.commit()
 
+        template = db.query(EmailTemplate).filter_by(template_type=sector).first()
+        if template:
+            template.subject = subject
+            template.body = body
+        else:
+            template = EmailTemplate(template_type=sector, subject=subject, body=body)
+            db.add(template)
+
+        db.commit()
         return jsonify({'success': True, 'message': f'Template {sector} sauvegardé'})
     except Exception as e:
         print(f"Erreur /api/template/{sector}: {e}")
+        print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         if db:
