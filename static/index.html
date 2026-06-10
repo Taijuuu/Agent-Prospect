@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Prospection</title>
+    <title>ProspectIA — Agent de prospection</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/favicon.svg">
+    <meta name="theme-color" content="#f59e0b">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -127,6 +130,32 @@
         .prospect-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
         .pcard { background: #fff; border: 1px solid #eae9e4; border-radius: 10px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: all 0.2s; overflow: hidden; display: flex; flex-direction: column; }
         .pcard:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.09); transform: translateY(-2px); }
+        .pcard { cursor: pointer; }
+
+        /* ── PROSPECT DETAIL MODAL ── */
+        .pmodal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .pmodal.show { display: flex; }
+        .pmodal-box { background: #fff; border-radius: 14px; width: 90%; max-width: 580px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,0.18); animation: slideUp 0.2s ease; }
+        @keyframes slideUp { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
+        .pmodal-header { padding: 20px 22px 16px; border-bottom: 1px solid #f4f3ef; display: flex; align-items: flex-start; gap: 14px; position: relative; }
+        .pmodal-close { position: absolute; top: 16px; right: 16px; background: #f4f3ef; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 16px; color: #6b7280; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+        .pmodal-close:hover { background: #e5e3de; color: #111827; }
+        .pmodal-avatar { width: 44px; height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: white; flex-shrink: 0; }
+        .pmodal-company { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+        .pmodal-meta { font-size: 12px; color: #9ca3af; }
+        .pmodal-details { padding: 14px 22px; border-bottom: 1px solid #f4f3ef; display: flex; flex-direction: column; gap: 7px; }
+        .pmodal-detail-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #374151; }
+        .pmodal-detail-row svg { flex-shrink: 0; color: #9ca3af; }
+        .pmodal-detail-row a { color: #f59e0b; text-decoration: none; font-weight: 500; }
+        .pmodal-detail-row a:hover { text-decoration: underline; }
+        .pmodal-email-section { padding: 16px 22px 20px; }
+        .pmodal-section-label { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+        .pmodal-subject { width: 100%; padding: 9px 12px; border: 1.5px solid #e5e3de; border-radius: 8px; font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; color: #111827; margin-bottom: 10px; transition: border-color 0.15s; }
+        .pmodal-subject:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+        .pmodal-body { width: 100%; min-height: 160px; padding: 10px 12px; border: 1.5px solid #e5e3de; border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif; color: #111827; resize: vertical; transition: border-color 0.15s; line-height: 1.6; }
+        .pmodal-body:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+        .pmodal-footer { padding: 14px 22px; border-top: 1px solid #f4f3ef; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .pmodal-no-email { font-size: 12px; color: #ef4444; background: #fee2e2; padding: 8px 12px; border-radius: 7px; flex: 1; }
         .pcard-header { padding: 14px 16px 12px; border-bottom: 1px solid #f4f3ef; display: flex; align-items: flex-start; gap: 10px; }
         .pcard-avatar { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; flex-shrink: 0; }
         .pcard-avatar.a0 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
@@ -145,6 +174,11 @@
         .pcard-score-bar { flex: 1; height: 3px; background: #f3f4f6; border-radius: 2px; overflow: hidden; }
         .pcard-score-fill { height: 100%; border-radius: 2px; }
         .pcard-footer { padding: 10px 16px; border-top: 1px solid #f4f3ef; display: flex; align-items: center; justify-content: space-between; }
+        .verify-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+        .verify-badge.no-website  { background: #d1fae5; color: #065f46; }
+        .verify-badge.has-website { background: #fee2e2; color: #991b1b; }
+        .verify-badge.pending     { background: #f3f4f6; color: #6b7280; }
+        .verify-badge.checking    { background: #fef3c7; color: #92400e; }
 
         /* ── PIPELINE PAGE ── */
         .pipeline-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
@@ -295,10 +329,7 @@
     <div class="container">
         <div class="sidebar">
             <div class="logo">
-                <div class="logo-mark">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" fill-opacity="0.9"/><circle cx="8" cy="8" r="2.5" fill="#111827"/></svg>
-                </div>
-                <div class="logo-text">Prospect<em>IA</em></div>
+                <img src="/static/logo.svg" alt="ProspectIA" style="height:32px;width:auto;">
             </div>
 
             <ul class="menu">
@@ -498,6 +529,10 @@
                         </div>
                         <div style="display:flex;gap:8px;align-items:center;">
                             <input type="text" id="search-input" placeholder="Rechercher..." style="width:200px;padding:7px 12px;font-size:13px;">
+                            <button class="btn btn-secondary" id="bulk-verify-btn" onclick="bulkVerify()" style="font-size:12px;padding:7px 13px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                Vérifier sites (20)
+                            </button>
                             <button class="btn btn-secondary" onclick="exportProspects()" style="font-size:12px;padding:7px 13px;">Exporter</button>
                         </div>
                     </div>
@@ -738,6 +773,47 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROSPECT DETAIL MODAL -->
+    <div id="prospect-modal" class="pmodal" onclick="if(event.target===this)closeProspectModal()">
+        <div class="pmodal-box">
+            <div class="pmodal-header">
+                <div class="pmodal-avatar" id="pmodal-avatar"></div>
+                <div style="flex:1;min-width:0;">
+                    <div class="pmodal-company" id="pmodal-company"></div>
+                    <div class="pmodal-meta" id="pmodal-meta"></div>
+                    <div style="margin-top:6px;" id="pmodal-badge"></div>
+                </div>
+                <button class="pmodal-close" onclick="closeProspectModal()">×</button>
+            </div>
+
+            <div class="pmodal-details" id="pmodal-details"></div>
+
+            <div class="pmodal-email-section">
+                <div class="pmodal-section-label">Email à envoyer</div>
+                <input type="text" class="pmodal-subject" id="pmodal-subject" placeholder="Objet du mail">
+                <textarea class="pmodal-body" id="pmodal-body" placeholder="Corps du mail..."></textarea>
+            </div>
+
+            <div class="pmodal-footer">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button class="btn btn-secondary" onclick="closeProspectModal()">Fermer</button>
+                    <button class="btn btn-secondary" id="pmodal-verify-btn" onclick="verifyFromModal()" style="font-size:12px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Vérifier site
+                    </button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span id="pmodal-verify-result" style="font-size:12px;"></span>
+                    <span id="pmodal-to" style="font-size:12px;color:#9ca3af;"></span>
+                    <button class="btn btn-cta" id="pmodal-send-btn" onclick="sendFromModal()">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        Envoyer
+                    </button>
                 </div>
             </div>
         </div>
@@ -1180,7 +1256,8 @@
                 const score = p.website_score || 0;
                 const sc = scoreColor(score);
                 const statusLabel = {new:'Nouveau', contacted:'Contacté', replied:'Répondu', converted:'Converti', unsubscribed:'Désabonné'}[p.status] || p.status;
-                return `<div class="pcard">
+                const websiteHost = p.website_url ? (() => { try { return new URL(p.website_url).hostname; } catch(e) { return p.website_url; } })() : '';
+                return `<div class="pcard" onclick="openProspectModal(${p.id})">
                     <div class="pcard-header">
                         <div class="pcard-avatar ${colors[i%4]}">${ini}</div>
                         <div class="pcard-info">
@@ -1190,8 +1267,8 @@
                         <span class="badge ${p.status}">${statusLabel}</span>
                     </div>
                     <div class="pcard-body">
-                        ${p.email ? `<div class="pcard-detail"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg><span>${p.email}</span></div>` : ''}
-                        ${p.phone ? `<div class="pcard-detail"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.4 19.79 19.79 0 0 1 1.61 4.81 2 2 0 0 1 3.6 2.63h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.2a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17.5z"/></svg><span>${p.phone}</span></div>` : ''}
+                        ${p.email ? `<div class="pcard-detail"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg><span>${p.email}</span></div>` : '<div class="pcard-detail" style="color:#d1d5db;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg><span>Email non trouvé</span></div>'}
+                        ${p.phone ? `<div class="pcard-detail"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.4 19.79 19.79 0 0 1 1.61 4.81 2 2 0 0 1 3.6 2.63h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.2a16 16 0 0 0 6 6z"/></svg><span>${p.phone}</span></div>` : ''}
                         <div class="pcard-score">
                             <span class="pcard-score-label">Score</span>
                             <div class="pcard-score-bar"><div class="pcard-score-fill" style="width:${score}%;background:${sc};"></div></div>
@@ -1199,8 +1276,11 @@
                         </div>
                     </div>
                     <div class="pcard-footer">
-                        <span style="font-size:11px;color:#9ca3af;">${p.website_url ? (() => { try { return new URL(p.website_url).hostname; } catch(e) { return p.website_url; } })() : 'Pas de site'}</span>
-                        ${p.email ? `<button class="btn" style="padding:5px 12px;font-size:11px;" onclick="sendEmailToProspect(${p.id},'${p.company_name.replace(/'/g,"\\'")}','${(p.industry||'').replace(/'/g,"\\'")}','${p.email}')">Envoyer</button>` : '<span style="font-size:11px;color:#d1d5db;">Pas d\'email</span>'}
+                        ${verifyBadgeHtml(p._verification || null)}
+                        <span style="font-size:11px;color:#9ca3af;display:flex;align-items:center;gap:4px;">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+                            Voir fiche
+                        </span>
                     </div>
                 </div>`;
             }).join('');
@@ -1213,7 +1293,16 @@
                 .then(r => r.json())
                 .then(d => {
                     document.getElementById('prospects-loading').classList.remove('show');
-                    _allProspects = d.prospects || [];
+                    _allProspects = (d.prospects || []).map(p => {
+                        // Parse verification from notes if present
+                        try {
+                            if (p.notes) {
+                                const n = JSON.parse(p.notes);
+                                if (n.verification) p._verification = n.verification;
+                            }
+                        } catch(e) {}
+                        return p;
+                    });
                     // Update tab counts
                     const counts = { '': _allProspects.length };
                     ['new','contacted','replied','converted'].forEach(s => {
@@ -1412,21 +1501,194 @@
             .catch(err => showToast('Erreur: ' + err.message, 'error'));
         }
 
+        // ── PROSPECT DETAIL MODAL ────────────────────────────────────────
+        let _modalProspectId = null;
+
+        const AVATAR_COLORS = ['a0','a1','a2','a3'];
+        const AVATAR_GRADS = [
+            'linear-gradient(135deg,#f59e0b,#ef4444)',
+            'linear-gradient(135deg,#10b981,#059669)',
+            'linear-gradient(135deg,#f97316,#dc2626)',
+            'linear-gradient(135deg,#8b5cf6,#6d28d9)',
+        ];
+        const STATUS_LABELS = { new:'Nouveau', contacted:'Contacté', replied:'Répondu', converted:'Converti', unsubscribed:'Désabonné' };
+
+        function openProspectModal(id) {
+            const p = _allProspects.find(x => x.id === id);
+            if (!p) return;
+            _modalProspectId = id;
+
+            const idx = _allProspects.indexOf(p);
+            const ini = p.company_name.substring(0,2).toUpperCase();
+
+            // Avatar
+            const av = document.getElementById('pmodal-avatar');
+            av.textContent = ini;
+            av.style.background = AVATAR_GRADS[idx % 4];
+
+            // Header
+            document.getElementById('pmodal-company').textContent = p.company_name;
+            document.getElementById('pmodal-meta').textContent = `${p.industry || '—'} · ${p.city || '—'}`;
+
+            const statusLabel = STATUS_LABELS[p.status] || p.status;
+            const badgeClass = p.status || 'new';
+            document.getElementById('pmodal-badge').innerHTML = `<span class="badge ${badgeClass}">${statusLabel}</span>`;
+
+            // Details
+            let details = '';
+            if (p.email)   details += `<div class="pmodal-detail-row"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>${p.email}</div>`;
+            if (p.phone)   details += `<div class="pmodal-detail-row"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.4 19.79 19.79 0 0 1 1.61 4.81 2 2 0 0 1 3.6 2.63h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.2a16 16 0 0 0 6 6z"/></svg>${p.phone}</div>`;
+            if (p.address) details += `<div class="pmodal-detail-row"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>${p.address}</div>`;
+            if (p.website_url) {
+                let host = p.website_url;
+                try { host = new URL(p.website_url).hostname; } catch(e){}
+                details += `<div class="pmodal-detail-row"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><a href="${p.website_url}" target="_blank">${host}</a> <span style="color:#9ca3af;font-size:11px;">· score ${p.website_score}/100</span></div>`;
+            }
+            if (!details) details = '<div style="font-size:12px;color:#9ca3af;">Aucune coordonnée trouvée</div>';
+            document.getElementById('pmodal-details').innerHTML = details;
+
+            // Pre-fill email
+            const sector = (p.industry || '').toLowerCase().replace(/ /g,'_');
+            const template = mailTemplates[p.industry] || mailTemplates[sector] || Object.values(mailTemplates)[0] || { subject:'', body:'' };
+            const name = p.company_name;
+            const fillTemplate = t => t
+                .replace(/\{\{nom_entreprise\}\}/g, name)
+                .replace(/\{\{secteur\}\}/g, p.industry || '')
+                .replace(/\{\{contact\}\}/g, name);
+
+            document.getElementById('pmodal-subject').value = fillTemplate(template.subject || '');
+            document.getElementById('pmodal-body').value = fillTemplate(template.body || '');
+
+            // Footer
+            if (p.email) {
+                document.getElementById('pmodal-to').textContent = `→ ${p.email}`;
+                document.getElementById('pmodal-send-btn').disabled = false;
+                document.getElementById('pmodal-send-btn').style.opacity = '1';
+            } else {
+                document.getElementById('pmodal-to').textContent = 'Pas d\'adresse email';
+                document.getElementById('pmodal-send-btn').disabled = true;
+                document.getElementById('pmodal-send-btn').style.opacity = '0.4';
+            }
+
+            document.getElementById('prospect-modal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeProspectModal() {
+            document.getElementById('prospect-modal').classList.remove('show');
+            document.body.style.overflow = '';
+            _modalProspectId = null;
+        }
+
+        // ── VERIFICATION ─────────────────────────────────────────────────
+        function verifyBadgeHtml(v) {
+            if (!v) return '<span class="verify-badge pending">Non vérifié</span>';
+            if (v.has_website === false) return `<span class="verify-badge no-website" title="${v.reason}">✓ Aucun site</span>`;
+            if (v.has_website === true)  return `<span class="verify-badge has-website" title="${v.reason}">⚠ Site trouvé</span>`;
+            return '<span class="verify-badge pending" title="Résultat inconcluant">? Inconcluant</span>';
+        }
+
+        function verifyFromModal() {
+            const id = _modalProspectId;
+            if (!id) return;
+            const btn = document.getElementById('pmodal-verify-btn');
+            const res = document.getElementById('pmodal-verify-result');
+            btn.disabled = true; btn.textContent = 'Vérification...';
+            res.innerHTML = '<span class="verify-badge checking">En cours...</span>';
+
+            fetch(`${API_BASE}/api/verify/${id}`, { method: 'POST' })
+                .then(r => r.json())
+                .then(d => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Vérifier site';
+                    if (d.success) {
+                        res.innerHTML = verifyBadgeHtml(d);
+                        // Update local cache
+                        const p = _allProspects.find(x => x.id === id);
+                        if (p) p._verification = d;
+                        // Refresh card
+                        renderProspectCards(_allProspects, _prospectFilter);
+                    } else {
+                        res.innerHTML = '<span style="font-size:11px;color:#ef4444;">Erreur</span>';
+                    }
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    res.innerHTML = '<span style="font-size:11px;color:#ef4444;">Erreur réseau</span>';
+                });
+        }
+
+        function bulkVerify() {
+            const btn = document.getElementById('bulk-verify-btn');
+            btn.disabled = true; btn.textContent = 'Vérification...';
+            showToast('Vérification des 20 premiers prospects...');
+
+            fetch(`${API_BASE}/api/verify-bulk`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) })
+                .then(r => r.json())
+                .then(d => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Vérifier sites (20)';
+                    if (d.success) {
+                        showToast(`${d.checked} vérifiés — ${d.no_website} sans site, ${d.has_website} avec site`);
+                        loadProspects();
+                    } else {
+                        showToast('Erreur: ' + d.error, 'error');
+                    }
+                })
+                .catch(e => {
+                    btn.disabled = false;
+                    showToast('Erreur réseau', 'error');
+                });
+        }
+
+        function sendFromModal() {
+            const p = _allProspects.find(x => x.id === _modalProspectId);
+            if (!p || !p.email) return;
+
+            const subject = document.getElementById('pmodal-subject').value.trim();
+            const body = document.getElementById('pmodal-body').value.trim();
+            if (!subject || !body) { showToast('Remplis l\'objet et le corps du mail', 'error'); return; }
+
+            const btn = document.getElementById('pmodal-send-btn');
+            btn.disabled = true; btn.textContent = 'Envoi...';
+
+            fetch(`${API_BASE}/api/send-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prospect_id: p.id, subject, body })
+            })
+            .then(r => r.json())
+            .then(d => {
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Envoyer';
+                if (d.success) {
+                    showToast(`Mail envoyé à ${p.email}`);
+                    closeProspectModal();
+                    loadProspects();
+                    updateDashboard();
+                } else {
+                    showToast('Erreur: ' + (d.error || 'Inconnu'), 'error');
+                }
+            })
+            .catch(e => {
+                btn.disabled = false;
+                btn.innerHTML = 'Envoyer';
+                showToast('Erreur réseau: ' + e.message, 'error');
+            });
+        }
+
+        // ── LEGACY (kept for dashboard table + pipeline table) ────────────
         let pendingEmail = null;
 
         function sendEmailToProspect(prospectId, company, sector, email) {
-            if (!email || email === '-') { showAlert('Pas d\'email pour ce prospect', 'error'); return; }
-            const template = mailTemplates[sector] || mailTemplates.restaurant;
+            // Open the new modal if prospect is in _allProspects
+            const p = _allProspects.find(x => x.id === prospectId);
+            if (p) { openProspectModal(prospectId); return; }
 
-            pendingEmail = {
-                prospectId: prospectId,
-                company: company,
-                sector: sector,
-                email: email,
-                subject: template.subject,
-                body: template.body
-            };
-
+            // Fallback: old confirm modal
+            if (!email || email === '-') { showToast('Pas d\'email pour ce prospect', 'error'); return; }
+            const template = mailTemplates[sector] || Object.values(mailTemplates)[0];
+            pendingEmail = { prospectId, company, sector, email, subject: template.subject, body: template.body };
             document.getElementById('confirm-email').textContent = email;
             document.getElementById('confirm-subject').textContent = template.subject;
             document.getElementById('confirm-send-modal').classList.add('show');
@@ -1477,6 +1739,7 @@
         setupCombobox('sector-search', 'search-sector', 'sector-dropdown');
         setupCombobox('template-search', 'template-sector', 'template-dropdown');
         document.getElementById('dash-search-input').addEventListener('keydown', e => { if (e.key === 'Enter') runAiSearch(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeProspectModal(); });
         document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); switchPage('dashboard'); document.getElementById('dash-search-input').focus(); } });
         loadTemplatesFromAPI();
         updateDashboard();

@@ -13,6 +13,7 @@ from database.crud import (
 )
 from prospecting.finder import ProspectFinder
 from prospecting.website_analyzer import WebsiteAnalyzer
+from prospecting.verifier import verify_web_presence, get_verification, set_verification
 from email_agent.gmail_client import GmailClient
 from config import TEST_MODE
 
@@ -95,7 +96,9 @@ def get_prospects_api():
                 'website_score': p.website_score or 0,
                 'website_url': p.website_url or '',
                 'status': p.status.value if p.status else 'unknown',
-                'created_at': p.created_at.isoformat() if p.created_at else ''
+                'created_at': p.created_at.isoformat() if p.created_at else '',
+                'notes': p.notes or '',
+                'contact_count': p.contact_count or 0,
             })
 
         db.close()
@@ -506,6 +509,116 @@ def save_template_api(sector):
 @app.route('/api/test')
 def test_api():
     return jsonify({'status': 'ok', 'message': 'API is working'})
+
+
+@app.route('/api/verify/<int:prospect_id>', methods=['POST'])
+def verify_prospect(prospect_id):
+    """Vérifie si un prospect a vraiment un site web."""
+    db = None
+    try:
+        db = get_db()
+        prospect = get_prospect(db, prospect_id)
+        if not prospect:
+            return jsonify({'success': False, 'error': 'Prospect not found'}), 404
+
+        print(f"[VERIFY] {prospect.company_name} ({prospect.city})")
+        result = verify_web_presence(
+            company_name=prospect.company_name,
+            city=prospect.city or '',
+            existing_url=prospect.website_url or '',
+        )
+
+        # Persist result in notes
+        prospect.notes = set_verification(prospect.notes, result)
+
+        # If a real website was found, update website_url and re-score
+        if result['has_website'] and result.get('found_url'):
+            if not prospect.website_url:
+                prospect.website_url = result['found_url']
+            if prospect.website_score == 0:
+                from prospecting.website_analyzer import WebsiteAnalyzer
+                analysis = WebsiteAnalyzer().analyze(result['found_url'])
+                prospect.website_score = analysis.get('score', 0)
+                prospect.website_issues = json.dumps(analysis.get('issues', []), ensure_ascii=False)
+
+        db.commit()
+        print(f"[VERIFY] → has_website={result['has_website']}, confidence={result['confidence']}, reason={result['reason']}")
+        return jsonify({'success': True, **result})
+
+    except Exception as e:
+        print(f"Erreur /api/verify/{prospect_id}: {e}")
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            db.close()
+
+
+@app.route('/api/verify-bulk', methods=['POST'])
+def verify_bulk():
+    """Vérifie un lot de prospects (max 20 à la fois)."""
+    db = None
+    try:
+        data = request.json or {}
+        ids = data.get('ids', [])[:20]
+        if not ids:
+            # Verify all unverified prospects (status=new, no verification yet)
+            db = get_db()
+            prospects = get_prospects(db, status=ProspectStatus.new, limit=20)
+            ids = [p.id for p in prospects
+                   if get_verification(p.notes) is None]
+            db.close()
+            db = None
+
+        results = {}
+        db = get_db()
+        for pid in ids:
+            p = get_prospect(db, pid)
+            if not p:
+                continue
+            try:
+                result = verify_web_presence(p.company_name, p.city or '', p.website_url or '')
+                p.notes = set_verification(p.notes, result)
+                if result['has_website'] and result.get('found_url') and not p.website_url:
+                    p.website_url = result['found_url']
+                db.commit()
+                results[pid] = result
+            except Exception as e:
+                results[pid] = {'error': str(e)}
+
+        db.close()
+        verified = sum(1 for r in results.values() if r.get('has_website') is False)
+        has_site = sum(1 for r in results.values() if r.get('has_website') is True)
+        return jsonify({
+            'success': True,
+            'checked': len(results),
+            'no_website': verified,
+            'has_website': has_site,
+            'results': results,
+        })
+
+    except Exception as e:
+        print(f"Erreur /api/verify-bulk: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            db.close()
+
+
+@app.route('/api/prospect/<int:prospect_id>/verification')
+def get_prospect_verification(prospect_id):
+    """Returns the verification status for a prospect."""
+    db = None
+    try:
+        db = get_db()
+        prospect = get_prospect(db, prospect_id)
+        if not prospect:
+            return jsonify({'error': 'Not found'}), 404
+        verification = get_verification(prospect.notes)
+        return jsonify({'verification': verification})
+    finally:
+        if db:
+            db.close()
 
 if __name__ == '__main__':
     print("Démarrage du serveur sur http://127.0.0.1:8080")
