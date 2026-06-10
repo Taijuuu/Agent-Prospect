@@ -1,133 +1,277 @@
+import re
 import time
-from typing import List, Dict, Optional
-
-import requests
-from duckduckgo_search import DDGS
+import concurrent.futures
+from typing import List, Dict
+from urllib.parse import urljoin, urlparse
 from loguru import logger
 
-from config import GOOGLE_PLACES_API_KEY
+import requests
+from bs4 import BeautifulSoup
+
+try:
+    from ddgs import DDGS
+except ImportError:
+    from duckduckgo_search import DDGS
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+}
+
+EMAIL_RE = re.compile(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}')
+PHONE_RE = re.compile(r'(?:0[1-9]|(?:\+|00)33\s?[1-9])(?:[\s.\-]?\d{2}){4}')
+SKIP_EMAIL_PARTS = {
+    'example', 'noreply', 'no-reply', 'test@', '@ex', 'email@', 'votre@',
+    'your@', '.png', '.jpg', '.gif', 'sentry', '@2x', 'wix', 'squarespace',
+    'wordpress', 'schema.org', 'w3.org',
+}
+
+
+def _clean_phone(raw: str) -> str:
+    digits = re.sub(r'\D', '', raw)
+    if digits.startswith('33') and len(digits) == 11:
+        digits = '0' + digits[2:]
+    if len(digits) == 10:
+        return ' '.join(digits[i:i+2] for i in range(0, 10, 2))
+    return raw.strip()
+
+
+def _is_valid_email(e: str) -> bool:
+    e = e.lower()
+    return not any(s in e for s in SKIP_EMAIL_PARTS)
+
+
+def extract_contact_from_url(url: str) -> Dict:
+    """Fetch a URL (and its /contact page) and extract email + phone."""
+    email, phone = '', ''
+    if not url or not url.startswith('http'):
+        return {'email': email, 'phone': phone}
+
+    pages_html = []
+    try:
+        r = requests.get(url, timeout=7, headers=HEADERS, allow_redirects=True)
+        if r.status_code < 400:
+            pages_html.append(r.text)
+            soup = BeautifulSoup(r.text, 'lxml')
+            # Discover contact page link
+            for a in soup.find_all('a', href=True):
+                text = a.get_text(' ', strip=True).lower()
+                href = a['href']
+                if any(kw in text or kw in href.lower()
+                       for kw in ['contact', 'nous joindre', 'joindre', 'coordonnées']):
+                    full = urljoin(url, href)
+                    if full != url and full.startswith('http'):
+                        try:
+                            cr = requests.get(full, timeout=5, headers=HEADERS)
+                            if cr.status_code < 400:
+                                pages_html.append(cr.text)
+                        except Exception:
+                            pass
+                        break
+    except Exception as e:
+        logger.debug(f"fetch {url}: {e}")
+        return {'email': email, 'phone': phone}
+
+    for html in pages_html:
+        if not email:
+            found = EMAIL_RE.findall(html)
+            valid = [e for e in found if _is_valid_email(e)]
+            if valid:
+                email = valid[0]
+        if not phone:
+            found = PHONE_RE.findall(html)
+            if found:
+                phone = _clean_phone(found[0])
+        if email and phone:
+            break
+
+    return {'email': email, 'phone': phone}
 
 
 class ProspectFinder:
 
-    def search_google_places(
-        self,
-        query: str,
-        location: str,
-        radius_km: int = 50,
-        max_results: int = 100
-    ) -> List[Dict]:
-        if not GOOGLE_PLACES_API_KEY:
-            logger.warning("GOOGLE_PLACES_API_KEY non configuré, fallback sur DuckDuckGo")
-            return self.search_via_serp(query, location, max_results)
-
+    # ── Pages Jaunes ────────────────────────────────────────────────────
+    def search_pagesjaunes(self, sector: str, city: str, max_results: int = 50) -> List[Dict]:
         results = []
-        radius_m = radius_km * 1000
-
-        geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
-        geo_resp = requests.get(geocode_url, params={
-            "address": location,
-            "key": GOOGLE_PLACES_API_KEY
-        }, timeout=10)
-        geo_data = geo_resp.json()
-
-        if not geo_data.get("results"):
-            logger.warning(f"Impossible de géocoder: {location}")
-            return []
-
-        lat = geo_data["results"][0]["geometry"]["location"]["lat"]
-        lng = geo_data["results"][0]["geometry"]["location"]["lng"]
-
-        url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        params = {
-            "location": f"{lat},{lng}",
-            "radius": radius_m,
-            "keyword": query,
-            "language": "fr",
-            "key": GOOGLE_PLACES_API_KEY
-        }
+        page = 1
+        session = requests.Session()
+        session.headers.update(HEADERS)
 
         while len(results) < max_results:
-            resp = requests.get(url, params=params, timeout=10)
-            data = resp.json()
+            url = "https://www.pagesjaunes.fr/annuaire/cherche"
+            params = {'quoi': sector, 'ou': city, 'page': page}
+            try:
+                resp = session.get(url, params=params, timeout=10)
+                if resp.status_code == 403:
+                    logger.warning("Pages Jaunes: accès refusé (403), fallback DDG")
+                    break
+                soup = BeautifulSoup(resp.text, 'lxml')
 
-            for place in data.get("results", []):
-                results.append({
-                    "name": place.get("name", ""),
-                    "address": place.get("vicinity", ""),
-                    "phone": "",
-                    "website": "",
-                    "place_id": place.get("place_id", ""),
-                    "types": place.get("types", []),
-                    "city": location
-                })
+                items = soup.select('li.bi-item') or soup.select('article.bilink') or soup.select('div.bi-bloc')
+                if not items:
+                    break
 
-            next_token = data.get("next_page_token")
-            if not next_token or len(results) >= max_results:
+                for item in items:
+                    name_el = (item.select_one('.bi-denomination a') or
+                               item.select_one('[class*="denomination"]') or
+                               item.select_one('h3 a') or
+                               item.select_one('a[class*="link"]'))
+                    if not name_el:
+                        continue
+                    name = name_el.get_text(' ', strip=True)
+                    if not name:
+                        continue
+
+                    phone_el = (item.select_one('.bi-phone') or
+                                item.select_one('[class*="tel"]') or
+                                item.select_one('[href^="tel:"]'))
+                    phone = ''
+                    if phone_el:
+                        raw = phone_el.get('href', '') or phone_el.get_text()
+                        phone = _clean_phone(raw.replace('tel:', ''))
+
+                    addr_el = (item.select_one('.bi-address') or
+                               item.select_one('[class*="address"]') or
+                               item.select_one('[class*="street"]'))
+                    address = addr_el.get_text(' ', strip=True) if addr_el else ''
+
+                    web_el = item.select_one('a[href*="http"]')
+                    website = ''
+                    if web_el:
+                        href = web_el.get('href', '')
+                        if 'pagesjaunes' not in href:
+                            website = href
+
+                    results.append({
+                        'name': name,
+                        'phone': phone,
+                        'address': address,
+                        'website': website,
+                        'email': '',
+                        'city': city,
+                        'industry': sector,
+                        'source': 'pagesjaunes',
+                    })
+
+                page += 1
+                time.sleep(1.2)
+
+            except Exception as e:
+                logger.error(f"Pages Jaunes error p{page}: {e}")
                 break
-
-            time.sleep(2)
-            params = {"pagetoken": next_token, "key": GOOGLE_PLACES_API_KEY}
 
         return results[:max_results]
 
-    def search_via_serp(self, query: str, location: str, num_results: int = 50) -> List[Dict]:
+    # ── DuckDuckGo text fallback ─────────────────────────────────────────
+    def search_via_ddg(self, sector: str, city: str, max_results: int = 50) -> List[Dict]:
         results = []
-        search_query = f"{query} {location} contact"
+        seen = set()
+        queries = [
+            f"{sector} {city} téléphone adresse",
+            f"{sector} artisan {city} contact",
+            f'"{sector}" "{city}"',
+        ]
 
         try:
             with DDGS() as ddgs:
-                ddg_results = list(ddgs.text(search_query, max_results=num_results, region="fr-fr"))
-
-            for r in ddg_results:
-                name = r.get("title", "").split(" - ")[0].split(" | ")[0].strip()
-                if not name:
-                    continue
-                results.append({
-                    "name": name,
-                    "address": "",
-                    "phone": "",
-                    "website": r.get("href", ""),
-                    "place_id": "",
-                    "types": [query],
-                    "city": location
-                })
+                for q in queries:
+                    if len(results) >= max_results:
+                        break
+                    try:
+                        hits = list(ddgs.text(q, max_results=20, region='fr-fr'))
+                        for r in hits:
+                            title = r.get('title', '')
+                            name = title.split(' - ')[0].split(' | ')[0].strip()
+                            if not name or name.lower() in seen:
+                                continue
+                            seen.add(name.lower())
+                            results.append({
+                                'name': name,
+                                'phone': '',
+                                'address': '',
+                                'website': r.get('href', ''),
+                                'email': '',
+                                'city': city,
+                                'industry': sector,
+                                'source': 'duckduckgo',
+                            })
+                        time.sleep(1.5)
+                    except Exception as e:
+                        logger.warning(f"DDG query '{q}': {e}")
         except Exception as e:
-            logger.error(f"Erreur DuckDuckGo pour '{query}' à '{location}': {e}")
+            logger.error(f"DDG init: {e}")
+
+        return results[:max_results]
+
+    # ── Contact enrichment (concurrent) ─────────────────────────────────
+    def enrich_contacts(self, results: List[Dict], max_workers: int = 6) -> List[Dict]:
+        to_enrich = [(i, r['website']) for i, r in enumerate(results)
+                     if r.get('website') and not r.get('email')]
+
+        if not to_enrich:
+            return results
+
+        logger.info(f"Enrichissement contact pour {len(to_enrich)} résultats...")
+
+        def fetch(item):
+            idx, url = item
+            return idx, extract_contact_from_url(url)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {ex.submit(fetch, item): item[0] for item in to_enrich}
+            for fut in concurrent.futures.as_completed(futures):
+                try:
+                    idx, contact = fut.result(timeout=20)
+                    if contact.get('email') and not results[idx]['email']:
+                        results[idx]['email'] = contact['email']
+                    if contact.get('phone') and not results[idx]['phone']:
+                        results[idx]['phone'] = contact['phone']
+                except Exception:
+                    pass
 
         return results
 
-    def filter_no_website(self, results: List[Dict]) -> List[Dict]:
-        return [r for r in results if not r.get("website")]
-
+    # ── Main entry point ─────────────────────────────────────────────────
     def run_full_search(
         self,
         sectors: List[str],
         cities: List[str],
-        max_per_combo: int = 50
+        max_per_combo: int = 50,
+        no_website_only: bool = False,
     ) -> List[Dict]:
         all_results = []
-        seen = set()
+        seen: set = set()
 
         for sector in sectors:
             for city in cities:
                 logger.info(f"Recherche: {sector} à {city}")
-                try:
-                    if GOOGLE_PLACES_API_KEY:
-                        results = self.search_google_places(sector, city, max_results=max_per_combo)
-                    else:
-                        results = self.search_via_serp(sector, city, num_results=max_per_combo)
 
-                    for r in results:
-                        key = (r["name"].lower().strip(), city.lower().strip())
-                        if key not in seen:
-                            seen.add(key)
-                            r["industry"] = sector
-                            r["city"] = city
-                            all_results.append(r)
+                # Try Pages Jaunes first
+                results = self.search_pagesjaunes(sector, city, max_per_combo)
 
-                    time.sleep(1)
-                except Exception as e:
-                    logger.error(f"Erreur recherche {sector}/{city}: {e}")
+                # Fallback to DuckDuckGo if Pages Jaunes gave nothing
+                if not results:
+                    logger.info("Pages Jaunes vide, fallback DuckDuckGo")
+                    results = self.search_via_ddg(sector, city, max_per_combo)
+
+                for r in results:
+                    key = (r['name'].lower().strip(), city.lower())
+                    if key not in seen:
+                        seen.add(key)
+                        all_results.append(r)
+
+                time.sleep(1)
+
+        # Enrich with emails/phones from websites
+        all_results = self.enrich_contacts(all_results)
+
+        # Filter: no website only
+        if no_website_only:
+            all_results = [r for r in all_results if not r.get('website')]
 
         return all_results

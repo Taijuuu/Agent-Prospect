@@ -137,11 +137,15 @@ def get_prospect_api(prospect_id):
 def search_api():
     try:
         data = request.json
-        sector = data.get('sector', 'restaurant')
-        city = data.get('city', 'Paris')
-        max_results = int(data.get('max_results', 20))
+        sector = data.get('sector', '').strip()
+        city = data.get('city', '').strip()
+        max_results = min(int(data.get('max_results', 20)), 100)
+        no_website_only = bool(data.get('no_website_only', False))
 
-        db = get_db()
+        if not sector or not city:
+            return jsonify({'success': False, 'error': 'Secteur et ville requis'}), 400
+
+        print(f"[SEARCH] {sector} à {city} (max={max_results}, sans_site={no_website_only})")
 
         finder = ProspectFinder()
         analyzer = WebsiteAnalyzer()
@@ -149,23 +153,29 @@ def search_api():
         results = finder.run_full_search(
             sectors=[sector],
             cities=[city],
-            max_per_combo=max_results
+            max_per_combo=max_results,
+            no_website_only=no_website_only,
         )
+
+        print(f"[SEARCH] {len(results)} résultats trouvés, sauvegarde en cours...")
+
+        db = get_db()
+        existing_names = {p.company_name.lower().strip() for p in get_prospects(db, limit=50000)}
 
         saved = 0
         for business in results:
             company_name = business.get('name', '').strip()
-            city_name = business.get('city', '').strip()
-
-            if not company_name:
-                continue
-
-            existing = get_prospects(db, limit=10000)
-            if any(p.company_name == company_name for p in existing):
+            city_name = business.get('city', city).strip()
+            if not company_name or company_name.lower() in existing_names:
                 continue
 
             domain = business.get('website', '')
-            analysis = analyzer.analyze(domain) if domain else {"score": 0, "issues": ["Aucun site web"]}
+            if domain and not no_website_only:
+                analysis = analyzer.analyze(domain)
+            elif not domain:
+                analysis = {"score": 0, "issues": ["Aucun site web"]}
+            else:
+                analysis = {"score": 0, "issues": ["Aucun site web"]}
 
             prospect_data = {
                 "company_name": company_name,
@@ -177,16 +187,23 @@ def search_api():
                 "website_url": domain or "",
                 "website_score": analysis.get("score", 0),
                 "website_issues": json.dumps(analysis.get("issues", []), ensure_ascii=False),
-                "source": "search",
+                "source": business.get('source', 'search'),
                 "status": ProspectStatus.new
             }
 
             create_prospect(db, prospect_data)
+            existing_names.add(company_name.lower())
             saved += 1
 
         db.commit()
         db.close()
-        return jsonify({'success': True, 'saved': saved, 'total_found': len(results)})
+        print(f"[SEARCH] {saved} prospects sauvegardés")
+        return jsonify({
+            'success': True,
+            'saved': saved,
+            'total_found': len(results),
+            'message': f"{saved} prospects trouvés pour '{sector}' à {city}"
+        })
 
     except Exception as e:
         print(f"Erreur /api/search: {e}")

@@ -109,6 +109,63 @@
         .stat-trend.up { background: #d1fae5; color: #065f46; }
         .stat-sparkline { flex-shrink: 0; }
 
+        /* ── GREETING BANNER ── */
+        .dash-greeting { background: linear-gradient(135deg, #fffbeb 0%, #fff7ed 60%, #ffffff 100%); border: 1px solid #fde68a; border-radius: 12px; padding: 20px 24px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .dash-greeting-label { font-size: 12px; color: #b45309; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .dash-greeting-name { font-size: 22px; font-weight: 700; color: #111827; letter-spacing: -0.5px; }
+        .dash-greeting-sub { font-size: 12px; color: #6b7280; margin-top: 3px; }
+
+        /* ── FILTER TABS ── */
+        .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+        .filter-tab { padding: 7px 16px; border: 1.5px solid #e5e3de; border-radius: 20px; background: white; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.15s; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 6px; }
+        .filter-tab:hover { border-color: #111827; color: #111827; }
+        .filter-tab.active { background: #111827; border-color: #111827; color: white; }
+        .filter-tab .tab-count { background: rgba(255,255,255,0.2); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
+        .filter-tab:not(.active) .tab-count { background: #f3f4f6; color: #9ca3af; }
+
+        /* ── PROSPECT CARDS GRID ── */
+        .prospect-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        .pcard { background: #fff; border: 1px solid #eae9e4; border-radius: 10px; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: all 0.2s; overflow: hidden; display: flex; flex-direction: column; }
+        .pcard:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.09); transform: translateY(-2px); }
+        .pcard-header { padding: 14px 16px 12px; border-bottom: 1px solid #f4f3ef; display: flex; align-items: flex-start; gap: 10px; }
+        .pcard-avatar { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; flex-shrink: 0; }
+        .pcard-avatar.a0 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+        .pcard-avatar.a1 { background: linear-gradient(135deg, #10b981, #059669); }
+        .pcard-avatar.a2 { background: linear-gradient(135deg, #f97316, #dc2626); }
+        .pcard-avatar.a3 { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+        .pcard-info { flex: 1; min-width: 0; }
+        .pcard-name { font-size: 13px; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pcard-meta { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .pcard-body { padding: 12px 16px; flex: 1; }
+        .pcard-detail { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #4b5563; margin-bottom: 5px; }
+        .pcard-detail svg { flex-shrink: 0; color: #9ca3af; }
+        .pcard-detail span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pcard-score { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .pcard-score-label { font-size: 10px; color: #9ca3af; font-weight: 600; text-transform: uppercase; }
+        .pcard-score-bar { flex: 1; height: 3px; background: #f3f4f6; border-radius: 2px; overflow: hidden; }
+        .pcard-score-fill { height: 100%; border-radius: 2px; }
+        .pcard-footer { padding: 10px 16px; border-top: 1px solid #f4f3ef; display: flex; align-items: center; justify-content: space-between; }
+
+        /* ── PIPELINE PAGE ── */
+        .pipeline-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .pip-stat { background: #fff; border: 1px solid #eae9e4; border-radius: 10px; padding: 16px 18px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+        .pip-stat-value { font-size: 28px; font-weight: 700; color: #111827; letter-spacing: -1px; }
+        .pip-stat-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+        .pip-stat-sub { font-size: 10px; margin-top: 2px; font-weight: 600; }
+        .pip-categories { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .pip-cat { padding: 7px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent; }
+        .pip-cat.amber  { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .pip-cat.green  { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+        .pip-cat.blue   { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+        .pip-cat.purple { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+        .pip-timeline { background: #fff; border: 1px solid #eae9e4; border-radius: 10px; padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+        .pip-timeline-title { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+        .pip-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .pip-bar-label { font-size: 12px; color: #6b7280; width: 80px; flex-shrink: 0; text-align: right; font-weight: 500; }
+        .pip-bar-track { flex: 1; height: 28px; background: #f4f3ef; border-radius: 6px; overflow: hidden; position: relative; }
+        .pip-bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 600; color: white; white-space: nowrap; transition: width 0.8s ease; }
+        .pip-bar-count { font-size: 12px; font-weight: 700; color: #111827; width: 30px; flex-shrink: 0; }
+
         /* ── CARDS ── */
         .card { background: #fff; border: 1px solid #eae9e4; border-radius: 10px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
         .card-header { padding: 15px 20px; border-bottom: 1px solid #f3f2ee; display: flex; align-items: center; justify-content: space-between; }
@@ -254,6 +311,10 @@
                         <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
                         Prospects
                     </a></li>
+                    <li><a onclick="switchPage('pipeline')" class="nav-link" data-page="pipeline">
+                        <svg class="nav-icon" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        À contacter
+                    </a></li>
                     <li><a onclick="switchPage('search')" class="nav-link" data-page="search">
                         <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                         Recherche
@@ -300,6 +361,19 @@
 
                 <!-- DASHBOARD -->
                 <div id="dashboard" class="page active">
+
+                    <!-- Greeting -->
+                    <div class="dash-greeting">
+                        <div>
+                            <div class="dash-greeting-label">Bonjour,</div>
+                            <div class="dash-greeting-name">Timeo</div>
+                            <div class="dash-greeting-sub">Voici un résumé de votre activité de prospection</div>
+                        </div>
+                        <button class="btn btn-cta" onclick="document.getElementById('dash-search-input').focus()">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            Lancer une recherche
+                        </button>
+                    </div>
 
                     <!-- Command bar -->
                     <div class="cmd-wrap">
@@ -417,37 +491,100 @@
 
                 <!-- PROSPECTS -->
                 <div id="prospects" class="page">
-                    <div class="page-header">
-                        <h1>Gestion des Prospects</h1>
-                        <p>Consultez et gérez vos prospects</p>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                        <div>
+                            <h1 style="font-size:21px;font-weight:700;">Prospects</h1>
+                            <p style="font-size:12px;color:#9ca3af;margin-top:3px;">Consultez et gérez vos contacts</p>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" id="search-input" placeholder="Rechercher..." style="width:200px;padding:7px 12px;font-size:13px;">
+                            <button class="btn btn-secondary" onclick="exportProspects()" style="font-size:12px;padding:7px 13px;">Exporter</button>
+                        </div>
                     </div>
 
+                    <!-- Filter tabs -->
+                    <div class="filter-tabs" id="prospect-filter-tabs">
+                        <button class="filter-tab active" data-status="" onclick="setProspectFilter(this, '')">
+                            Tous <span class="tab-count" id="tab-count-all">—</span>
+                        </button>
+                        <button class="filter-tab" data-status="new" onclick="setProspectFilter(this, 'new')">
+                            Nouveau <span class="tab-count" id="tab-count-new">—</span>
+                        </button>
+                        <button class="filter-tab" data-status="contacted" onclick="setProspectFilter(this, 'contacted')">
+                            Contacté <span class="tab-count" id="tab-count-contacted">—</span>
+                        </button>
+                        <button class="filter-tab" data-status="replied" onclick="setProspectFilter(this, 'replied')">
+                            Répondu <span class="tab-count" id="tab-count-replied">—</span>
+                        </button>
+                        <button class="filter-tab" data-status="converted" onclick="setProspectFilter(this, 'converted')">
+                            Converti <span class="tab-count" id="tab-count-converted">—</span>
+                        </button>
+                    </div>
+
+                    <div class="loading show" id="prospects-loading"><div class="spinner"></div>Chargement...</div>
+                    <div class="prospect-cards" id="prospects-cards"></div>
+                    <div id="prospects-empty" class="empty" style="display:none;">Aucun prospect dans cette catégorie</div>
+
+                    <!-- Hidden for compat -->
+                    <select id="status-filter" style="display:none;"></select>
+                </div>
+
+                <!-- PIPELINE -->
+                <div id="pipeline" class="page">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                        <div>
+                            <h1 style="font-size:21px;font-weight:700;">À contacter</h1>
+                            <p style="font-size:12px;color:#9ca3af;margin-top:3px;">Pipeline et suivi des relances</p>
+                        </div>
+                        <button class="btn btn-cta" style="font-size:12px;" onclick="switchPage('search')">+ Nouveau prospect</button>
+                    </div>
+
+                    <!-- Pipeline stats -->
+                    <div class="pipeline-stats" id="pipeline-stats">
+                        <div class="pip-stat">
+                            <div class="pip-stat-value" id="pip-total">—</div>
+                            <div class="pip-stat-label">Total</div>
+                            <div class="pip-stat-sub" style="color:#9ca3af;">prospects</div>
+                        </div>
+                        <div class="pip-stat">
+                            <div class="pip-stat-value" id="pip-new" style="color:#f59e0b;">—</div>
+                            <div class="pip-stat-label">À envoyer</div>
+                            <div class="pip-stat-sub" style="color:#f59e0b;">nouveaux</div>
+                        </div>
+                        <div class="pip-stat">
+                            <div class="pip-stat-value" id="pip-contacted" style="color:#f97316;">—</div>
+                            <div class="pip-stat-label">En cours</div>
+                            <div class="pip-stat-sub" style="color:#f97316;">contactés</div>
+                        </div>
+                        <div class="pip-stat">
+                            <div class="pip-stat-value" id="pip-replied" style="color:#10b981;">—</div>
+                            <div class="pip-stat-label">Répondus</div>
+                            <div class="pip-stat-sub" style="color:#10b981;">intéressés</div>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="pip-categories">
+                        <div class="pip-cat amber">Nouveau</div>
+                        <div class="pip-cat green">Répondu</div>
+                        <div class="pip-cat blue">Contacté</div>
+                        <div class="pip-cat purple">Converti</div>
+                    </div>
+
+                    <!-- Timeline / Gantt -->
+                    <div class="pip-timeline">
+                        <div class="pip-timeline-title">Répartition du pipeline</div>
+                        <div id="pip-gantt"></div>
+                    </div>
+
+                    <!-- Prospects à relancer -->
                     <div class="card">
+                        <div class="card-header">
+                            <h2>Prochaines relances</h2>
+                        </div>
                         <div class="card-body">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Rechercher</label>
-                                    <input type="text" id="search-input" placeholder="Nom de l'entreprise">
-                                </div>
-                                <div class="form-group">
-                                    <label>Statut</label>
-                                    <select id="status-filter">
-                                        <option value="">Tous les statuts</option>
-                                        <option value="new">Nouveau</option>
-                                        <option value="contacted">Contacté</option>
-                                        <option value="replied">Répondu</option>
-                                        <option value="converted">Converti</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="btn-group">
-                                <button class="btn" onclick="loadProspects()">Filtrer</button>
-                                <button class="btn btn-secondary" onclick="exportProspects()">Exporter</button>
-                            </div>
-
-                            <div class="loading show" id="prospects-loading"><div class="spinner"></div>Chargement...</div>
-                            <div class="table-wrapper" id="prospects-table"></div>
+                            <div class="loading show" id="pipeline-loading"><div class="spinner"></div>Chargement...</div>
+                            <div class="table-wrapper" id="pipeline-table"></div>
                         </div>
                     </div>
                 </div>
@@ -820,42 +957,57 @@
             return pts;
         }
 
+        function parseSearchQuery(q) {
+            const lq = q.toLowerCase();
+            const sectorMap = {
+                plombier:'plombier', plombiers:'plombier', coiffeur:'coiffeur', coiffeurs:'coiffeur',
+                restaurant:'restaurant', restaurants:'restaurant', boulangerie:'boulangerie',
+                boulanger:'boulangerie', peinture:'peintre en bâtiment', peintre:'peintre en bâtiment',
+                'électricien':'électricien', electricien:'électricien', garage:'garage automobile',
+                mécanicien:'garage automobile', fleuriste:'fleuriste', menuisier:'menuisier',
+                charpentier:'menuisier', serrurier:'serrurier', photographe:'photographe',
+                kiné:'kiné', kinésithérapeute:'kiné', dentiste:'dentiste', architecte:'architecte',
+                comptable:'expert-comptable', avocat:'avocat', traiteur:'traiteur',
+                maçon:'maçon', carreleur:'carreleur', paysagiste:'paysagiste', couvreur:'couvreur',
+            };
+            let sector = '';
+            for (const [k, v] of Object.entries(sectorMap)) { if (lq.includes(k)) { sector = v; break; } }
+
+            const cityRe = /\b(paris|lyon|marseille|toulouse|nice|bordeaux|nantes|lille|strasbourg|rennes|montpellier|grenoble|nîmes|toulon|nancy|metz|rouen|caen|dijon|angers|brest|limoges|reims)\b/i;
+            const cityM = q.match(cityRe);
+            const city = cityM ? cityM[1].charAt(0).toUpperCase() + cityM[1].slice(1).toLowerCase() : '';
+            const numM = q.match(/(\d+)/);
+            const maxResults = numM ? Math.min(parseInt(numM[1]), 100) : 20;
+            const noWebsite = /sans site|pas de site|aucun site/i.test(lq);
+            return { sector, city, maxResults, noWebsite };
+        }
+
         function runAiSearch() {
             const query = document.getElementById('dash-search-input').value.trim();
             if (!query) { showToast('Décris ce que tu cherches', 'error'); return; }
-
-            const numMatch = query.match(/(\d+)/);
-            const cityMatch = query.match(/\b(paris|lyon|marseille|toulouse|nice|bordeaux|nantes|lille|strasbourg|rennes|montpellier|grenoble|n[iî]mes|toulon)\b/i);
-            const sectorMap = { plombier:'plombier', coiffeur:'coiffeur', restaurant:'restaurant', boulangerie:'boulangerie', peinture:'peintre en bâtiment', peintre:'peintre en bâtiment', 'électricien':'électricien', electricien:'électricien', garage:'garage automobile', fleuriste:'fleuriste', menuisier:'menuisier', serrurier:'serrurier', photographe:'photographe', kiné:'kiné', dentiste:'dentiste', architecte:'architecte', comptable:'expert-comptable', avocat:'avocat' };
-
-            let sector = '';
-            const lq = query.toLowerCase();
-            for (const [key, val] of Object.entries(sectorMap)) {
-                if (lq.includes(key)) { sector = val; break; }
-            }
-
-            const city = cityMatch ? cityMatch[1].charAt(0).toUpperCase() + cityMatch[1].slice(1).toLowerCase() : '';
-            const maxResults = numMatch ? Math.min(parseInt(numMatch[1]), 100) : 20;
-
+            const { sector, city, maxResults, noWebsite } = parseSearchQuery(query);
             if (!sector || !city) {
-                showToast('Précise un secteur et une ville (ex: "30 plombiers à Lyon")', 'error');
+                showToast('Précise un secteur et une ville — ex: "30 plombiers à Lyon"', 'error');
                 return;
             }
 
-            const btn = document.querySelector('.dash-search-btn');
-            btn.disabled = true;
-            btn.textContent = 'Recherche...';
+            const btn = document.querySelector('.cmd-run');
+            btn.disabled = true; btn.textContent = 'Scraping...';
+            showToast(`Recherche de ${maxResults} ${sector} à ${city}${noWebsite ? ' sans site' : ''}...`);
 
             fetch(`${API_BASE}/api/search`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sector, city, max_results: maxResults })
+                body: JSON.stringify({ sector, city, max_results: maxResults, no_website_only: noWebsite })
             })
             .then(r => r.json())
             .then(d => {
                 btn.disabled = false; btn.textContent = 'Lancer';
-                if (d.success) { showToast(`${d.saved} prospects "${sector}" à ${city} ajoutés`); updateDashboard(); }
-                else showToast('Erreur: ' + d.error, 'error');
+                if (d.success) {
+                    showToast(d.message || `${d.saved} prospects ajoutés`);
+                    updateDashboard();
+                    if (document.getElementById('prospects').classList.contains('active')) loadProspects();
+                } else showToast('Erreur: ' + (d.error || 'Inconnu'), 'error');
             })
             .catch(e => { btn.disabled = false; btn.textContent = 'Lancer'; showToast('Erreur réseau: ' + e.message, 'error'); });
         }
@@ -911,24 +1063,21 @@
             document.querySelector(`[data-page="${page}"]`).classList.add('active');
 
             const titles = {
-                dashboard: 'Tableau de Bord',
-                prospects: 'Gestion des Prospects',
-                search: 'Chercher des Prospects',
-                emails: 'Historique des Emails',
-                'mail-templates': 'Templates de Mails'
+                dashboard: 'Tableau de Bord', prospects: 'Prospects',
+                pipeline: 'À contacter', search: 'Chercher des Prospects',
+                emails: 'Emails', 'mail-templates': 'Templates de Mails'
             };
             const subtitles = {
-                dashboard: 'Vue d\'ensemble de votre prospection',
-                prospects: 'Consultez et gérez vos prospects',
-                search: 'Trouvez des prospects dans votre secteur d\'activité',
-                emails: 'Suivi des emails envoyés et reçus',
-                'mail-templates': 'Personnalisez vos templates par secteur'
+                dashboard: 'Vue d\'ensemble de votre prospection', prospects: 'Consultez et gérez vos contacts',
+                pipeline: 'Pipeline et suivi des relances', search: 'Trouvez des prospects dans votre secteur',
+                emails: 'Suivi des emails envoyés et reçus', 'mail-templates': 'Personnalisez vos templates'
             };
-            document.getElementById('page-title').textContent = titles[page];
-            document.getElementById('page-subtitle').textContent = subtitles[page];
+            document.getElementById('page-title').textContent = titles[page] || page;
+            document.getElementById('page-subtitle').textContent = subtitles[page] || '';
 
             if (page === 'dashboard') updateDashboard();
             if (page === 'prospects') loadProspects();
+            if (page === 'pipeline') loadPipeline();
             if (page === 'emails') loadEmails();
         }
 
@@ -998,26 +1147,135 @@
                 });
         }
 
+        let _prospectFilter = '';
+        let _allProspects = [];
+
+        function setProspectFilter(btn, status) {
+            _prospectFilter = status;
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            renderProspectCards(_allProspects, status);
+        }
+
+        function scoreColor(s) {
+            if (s <= 30) return '#ef4444';
+            if (s <= 60) return '#f97316';
+            return '#10b981';
+        }
+
+        function renderProspectCards(prospects, filter) {
+            const search = (document.getElementById('search-input')?.value || '').toLowerCase();
+            const colors = ['a0','a1','a2','a3'];
+            const filtered = prospects.filter(p => {
+                const matchFilter = !filter || p.status === filter;
+                const matchSearch = !search || p.company_name.toLowerCase().includes(search) || (p.city||'').toLowerCase().includes(search);
+                return matchFilter && matchSearch;
+            });
+            const container = document.getElementById('prospects-cards');
+            const empty = document.getElementById('prospects-empty');
+            if (!filtered.length) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+            empty.style.display = 'none';
+            container.innerHTML = filtered.map((p, i) => {
+                const ini = p.company_name.substring(0, 2).toUpperCase();
+                const score = p.website_score || 0;
+                const sc = scoreColor(score);
+                const statusLabel = {new:'Nouveau', contacted:'Contacté', replied:'Répondu', converted:'Converti', unsubscribed:'Désabonné'}[p.status] || p.status;
+                return `<div class="pcard">
+                    <div class="pcard-header">
+                        <div class="pcard-avatar ${colors[i%4]}">${ini}</div>
+                        <div class="pcard-info">
+                            <div class="pcard-name">${p.company_name}</div>
+                            <div class="pcard-meta">${p.industry || '—'} · ${p.city || '—'}</div>
+                        </div>
+                        <span class="badge ${p.status}">${statusLabel}</span>
+                    </div>
+                    <div class="pcard-body">
+                        ${p.email ? `<div class="pcard-detail"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg><span>${p.email}</span></div>` : ''}
+                        ${p.phone ? `<div class="pcard-detail"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.4 19.79 19.79 0 0 1 1.61 4.81 2 2 0 0 1 3.6 2.63h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.2a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17.5z"/></svg><span>${p.phone}</span></div>` : ''}
+                        <div class="pcard-score">
+                            <span class="pcard-score-label">Score</span>
+                            <div class="pcard-score-bar"><div class="pcard-score-fill" style="width:${score}%;background:${sc};"></div></div>
+                            <span style="font-size:11px;font-weight:700;color:${sc};">${score}</span>
+                        </div>
+                    </div>
+                    <div class="pcard-footer">
+                        <span style="font-size:11px;color:#9ca3af;">${p.website_url ? (() => { try { return new URL(p.website_url).hostname; } catch(e) { return p.website_url; } })() : 'Pas de site'}</span>
+                        ${p.email ? `<button class="btn" style="padding:5px 12px;font-size:11px;" onclick="sendEmailToProspect(${p.id},'${p.company_name.replace(/'/g,"\\'")}','${(p.industry||'').replace(/'/g,"\\'")}','${p.email}')">Envoyer</button>` : '<span style="font-size:11px;color:#d1d5db;">Pas d\'email</span>'}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
         function loadProspects() {
             document.getElementById('prospects-loading').classList.add('show');
-            const status = document.getElementById('status-filter').value;
-            fetch(`${API_BASE}/api/prospects?status=${status}&limit=100`)
+            document.getElementById('prospects-cards').innerHTML = '';
+            fetch(`${API_BASE}/api/prospects?limit=200`)
                 .then(r => r.json())
                 .then(d => {
                     document.getElementById('prospects-loading').classList.remove('show');
-                    if (!d.prospects.length) { document.getElementById('prospects-table').innerHTML = '<p class="empty">Aucun prospect</p>'; return; }
-                    let h = '<table><thead><tr><th>Entreprise</th><th>Email</th><th>Téléphone</th><th>Secteur</th><th>Ville</th><th>Score</th><th>Statut</th><th>Action</th></tr></thead><tbody>';
-                    const colors = ['blue', 'green', 'orange', 'purple'];
-                    d.prospects.forEach((p, i) => {
-                        const initials = p.company_name.substring(0, 2).toUpperCase();
-                        h += `<tr><td><div class="company-name"><div class="avatar ${colors[i % 4]}">${initials}</div>${p.company_name}</div></td><td>${p.email || '-'}</td><td>${p.phone || '-'}</td><td>${p.industry || '-'}</td><td>${p.city || '-'}</td><td>${p.website_score}/100</td><td><span class="badge ${p.status}">${p.status}</span></td><td><button class="btn" style="padding:6px 12px; font-size:12px;" onclick="sendEmailToProspect(${p.id}, '${p.company_name}', '${p.industry}', '${p.email}')">Envoyer</button></td></tr>`;
+                    _allProspects = d.prospects || [];
+                    // Update tab counts
+                    const counts = { '': _allProspects.length };
+                    ['new','contacted','replied','converted'].forEach(s => {
+                        counts[s] = _allProspects.filter(p => p.status === s).length;
+                    });
+                    document.getElementById('tab-count-all').textContent = counts[''];
+                    document.getElementById('tab-count-new').textContent = counts['new'];
+                    document.getElementById('tab-count-contacted').textContent = counts['contacted'];
+                    document.getElementById('tab-count-replied').textContent = counts['replied'];
+                    document.getElementById('tab-count-converted').textContent = counts['converted'];
+                    renderProspectCards(_allProspects, _prospectFilter);
+                })
+                .catch(err => { document.getElementById('prospects-loading').classList.remove('show'); console.error(err); });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('search-input')?.addEventListener('input', () => renderProspectCards(_allProspects, _prospectFilter));
+        });
+
+        function loadPipeline() {
+            fetch(`${API_BASE}/api/stats`)
+                .then(r => r.json())
+                .then(d => {
+                    const total = d.total || 0;
+                    const byStatus = d.by_status || {};
+                    document.getElementById('pip-total').textContent = total;
+                    document.getElementById('pip-new').textContent = byStatus.new || 0;
+                    document.getElementById('pip-contacted').textContent = byStatus.contacted || 0;
+                    document.getElementById('pip-replied').textContent = byStatus.replied || 0;
+
+                    const gantt = document.getElementById('pip-gantt');
+                    const rows = [
+                        { label: 'Nouveau',   val: byStatus.new || 0,       color: '#f59e0b', max: total },
+                        { label: 'Contacté',  val: byStatus.contacted || 0, color: '#f97316', max: total },
+                        { label: 'Répondu',   val: byStatus.replied || 0,   color: '#10b981', max: total },
+                        { label: 'Converti',  val: byStatus.converted || 0, color: '#8b5cf6', max: total },
+                        { label: 'Non-sub.',  val: byStatus.unsubscribed || 0, color: '#9ca3af', max: total },
+                    ];
+                    gantt.innerHTML = rows.map(r => `
+                        <div class="pip-bar-row">
+                            <div class="pip-bar-label">${r.label}</div>
+                            <div class="pip-bar-track">
+                                <div class="pip-bar-fill" style="width:${r.max ? Math.max(r.val/r.max*100,2) : 0}%;background:${r.color};">
+                                    ${r.val > 0 ? r.val + ' prospects' : ''}
+                                </div>
+                            </div>
+                            <div class="pip-bar-count">${r.val}</div>
+                        </div>`).join('');
+                });
+
+            fetch(`${API_BASE}/api/prospects?status=contacted&limit=20`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('pipeline-loading').classList.remove('show');
+                    const prospects = d.prospects || [];
+                    if (!prospects.length) { document.getElementById('pipeline-table').innerHTML = '<p class="empty">Aucune relance en attente</p>'; return; }
+                    let h = '<table><thead><tr><th>Entreprise</th><th>Ville</th><th>Email</th><th>Contacts</th><th>Action</th></tr></thead><tbody>';
+                    prospects.forEach(p => {
+                        h += `<tr><td>${p.company_name}</td><td>${p.city||'—'}</td><td>${p.email||'—'}</td><td>${p.contact_count||0}/3</td><td><button class="btn" style="padding:5px 12px;font-size:11px;" onclick="sendEmailToProspect(${p.id},'${p.company_name.replace(/'/g,"\\'")}','${(p.industry||'').replace(/'/g,"\\'")}','${p.email||''}')">Relancer</button></td></tr>`;
                     });
                     h += '</tbody></table>';
-                    document.getElementById('prospects-table').innerHTML = h;
-                })
-                .catch(err => {
-                    document.getElementById('prospects-loading').classList.remove('show');
-                    console.error('Erreur loadProspects:', err);
+                    document.getElementById('pipeline-table').innerHTML = h;
                 });
         }
 
