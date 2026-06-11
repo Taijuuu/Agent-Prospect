@@ -91,7 +91,7 @@
 
         /* ── STAT CARDS ── */
         .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 18px; }
-        .stat { background: #fff; border: 1px solid #eae9e4; border-radius: 10px; padding: 18px 20px 16px; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.04); position: relative; overflow: hidden; }
+        .stat { background: #fff; border: 1px solid #eae9e4; border-radius: 10px; padding: 18px 20px 16px; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.04); position: relative; overflow: hidden; cursor: pointer; }
         .stat::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 10px 0 0 10px; }
         .stat:nth-child(1)::before { background: #6366f1; }
         .stat:nth-child(2)::before { background: #10b981; }
@@ -429,7 +429,7 @@
 
                     <!-- Stat cards 2x2 -->
                     <div class="stats">
-                        <div class="stat">
+                        <div class="stat" onclick="switchPage('prospects')">
                             <div class="stat-header">
                                 <div class="stat-title">Prospects</div>
                                 <div class="stat-icon">
@@ -448,7 +448,7 @@
                             </div>
                         </div>
 
-                        <div class="stat">
+                        <div class="stat" onclick="switchPage('emails')">
                             <div class="stat-header">
                                 <div class="stat-title">Mails envoyés</div>
                                 <div class="stat-icon">
@@ -467,7 +467,7 @@
                             </div>
                         </div>
 
-                        <div class="stat">
+                        <div class="stat" onclick="switchPage('prospects'); setTimeout(()=>setProspectFilter(document.querySelector('[data-status=replied]'),'replied'),100)">
                             <div class="stat-header">
                                 <div class="stat-title">Réponses</div>
                                 <div class="stat-icon">
@@ -486,7 +486,7 @@
                             </div>
                         </div>
 
-                        <div class="stat">
+                        <div class="stat" onclick="switchPage('prospects'); setTimeout(()=>setProspectFilter(document.querySelector('[data-status=converted]'),'converted'),100)">
                             <div class="stat-header">
                                 <div class="stat-title">Conversions</div>
                                 <div class="stat-icon">
@@ -698,17 +698,12 @@
 
                 <!-- EMAILS -->
                 <div id="emails" class="page">
-                    <div class="page-header">
-                        <h1>Historique des Emails</h1>
-                        <p>Suivi des emails envoyés et reçus</p>
+                    <div style="margin-bottom:24px;">
+                        <h1 style="font-size:21px;font-weight:700;">Mails envoyés</h1>
+                        <p style="font-size:13px;color:#9ca3af;margin-top:3px;">Historique de tous les mails envoyés à vos prospects</p>
                     </div>
-
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="loading show" id="emails-loading"><div class="spinner"></div>Chargement...</div>
-                            <div class="table-wrapper" id="emails-table"></div>
-                        </div>
-                    </div>
+                    <div class="loading show" id="emails-loading"><div class="spinner"></div>Chargement...</div>
+                    <div id="emails-list" style="display:flex;flex-direction:column;gap:12px;"></div>
                 </div>
 
                 <!-- MAIL TEMPLATES -->
@@ -1417,34 +1412,57 @@
 
         function loadEmails() {
             document.getElementById('emails-loading').classList.add('show');
-            fetch(`${API_BASE}/api/emails?direction=sent&limit=50`)
+            fetch(`${API_BASE}/api/emails?direction=sent&limit=100`)
                 .then(r => r.json())
                 .then(d => {
                     document.getElementById('emails-loading').classList.remove('show');
-                    if (!d.emails.length) { document.getElementById('emails-table').innerHTML = '<p class="empty">Aucun email envoyé</p>'; return; }
-                    let h = '<table><thead><tr><th>Email</th><th>Entreprise</th><th>Secteur</th><th>Objet</th><th>Date</th><th>Action</th></tr></thead><tbody>';
-                    d.emails.forEach(e => {
-                        const date = new Date(e.sent_at).toLocaleDateString('fr-FR');
-                        h += `<tr><td>${e.email}</td><td>${e.company_name}</td><td>${e.industry}</td><td>${e.subject}</td><td>${date}</td><td><button class="btn" style="padding:6px 12px; font-size:12px;" onclick="showEmailDetails(${e.prospect_id}, '${e.company_name}', '${e.industry}')">Voir</button></td></tr>`;
-                    });
-                    h += '</tbody></table>';
-                    document.getElementById('emails-table').innerHTML = h;
+                    const list = document.getElementById('emails-list');
+                    if (!d.emails || !d.emails.length) {
+                        list.innerHTML = '<p class="empty" style="text-align:center;padding:40px;color:#9ca3af;">Aucun mail envoyé pour l\'instant</p>';
+                        return;
+                    }
+                    list.innerHTML = d.emails.map(e => {
+                        const date = new Date(e.sent_at).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+                        const initials = (e.company_name||'?').substring(0,2).toUpperCase();
+                        const bodyPreview = (e.body||'').replace(/\n/g,' ').substring(0,120);
+                        return `
+                        <div style="background:#fff;border:1px solid #eae9e4;border-radius:12px;padding:18px 20px;cursor:pointer;transition:box-shadow 0.15s;"
+                             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'"
+                             onclick="showEmailDetails('${(e.company_name||'').replace(/'/g,"\\'")}','${(e.email||'').replace(/'/g,"\\'")}','${(e.subject||'').replace(/'/g,"\\'")}',${JSON.stringify(e.body||'').replace(/</g,'\\u003c')})">
+                            <div style="display:flex;align-items:center;gap:14px;">
+                                <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#818cf8);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0;">${initials}</div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                        <div style="font-weight:600;font-size:14px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.company_name||'—'}</div>
+                                        <div style="font-size:11px;color:#9ca3af;flex-shrink:0;">${date}</div>
+                                    </div>
+                                    <div style="font-size:12px;color:#6366f1;font-weight:500;margin-top:2px;">${e.email||'Pas d\'adresse'}</div>
+                                    <div style="font-size:12px;color:#374151;font-weight:600;margin-top:6px;">${e.subject||'—'}</div>
+                                    <div style="font-size:12px;color:#9ca3af;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${bodyPreview}${(e.body||'').length > 120 ? '…' : ''}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
                 })
                 .catch(err => {
                     document.getElementById('emails-loading').classList.remove('show');
-                    document.getElementById('emails-table').innerHTML = '<p class="empty">Erreur: ' + err.message + '</p>';
+                    document.getElementById('emails-list').innerHTML = '<p class="empty">Erreur: ' + err.message + '</p>';
                 });
         }
 
-        function showEmailDetails(id, company, sector) {
-            const template = mailTemplates[sector] || { subject: 'Objet', body: 'Contenu' };
+        function showEmailDetails(company, email, subject, body) {
             document.getElementById('modal-details').innerHTML = `
-                <p style="margin-bottom: 15px;"><strong>Entreprise:</strong> ${company}</p>
-                <p style="margin-bottom: 15px;"><strong>Secteur:</strong> ${sector}</p>
-                <p style="margin-bottom: 8px;"><strong>Objet:</strong></p>
-                <p style="margin-bottom: 20px; background: #f9fafb; padding: 12px; border-radius: 6px; border-left: 3px solid #2563eb;">${template.subject}</p>
-                <p style="margin-bottom: 8px;"><strong>Contenu:</strong></p>
-                <p style="background: #f9fafb; padding: 12px; border-radius: 6px; white-space: pre-wrap; border-left: 3px solid #2563eb;">${template.body}</p>
+                <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#818cf8);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">${(company||'?').substring(0,2).toUpperCase()}</div>
+                    <div>
+                        <div style="font-weight:700;font-size:15px;color:#111827;">${company}</div>
+                        <div style="font-size:12px;color:#6366f1;">${email}</div>
+                    </div>
+                </div>
+                <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Objet</div>
+                <div style="margin-bottom:16px;background:#f9fafb;padding:12px;border-radius:8px;border-left:3px solid #6366f1;font-size:13px;font-weight:600;color:#111827;">${subject}</div>
+                <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Contenu</div>
+                <div style="background:#f9fafb;padding:14px;border-radius:8px;border-left:3px solid #6366f1;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.6;">${body}</div>
             `;
             document.getElementById('email-modal').classList.add('show');
         }
