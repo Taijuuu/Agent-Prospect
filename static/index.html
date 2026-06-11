@@ -64,19 +64,19 @@
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
         /* ── COMMAND BAR ── */
-        .cmd-wrap { background: #fff; border: 1px solid #eae9e4; border-radius: 12px; margin-bottom: 18px; overflow: visible; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .cmd-bar { display: flex; align-items: center; gap: 12px; padding: 13px 16px; }
-        .cmd-bar-icon { color: #9ca3af; flex-shrink: 0; }
-        .cmd-bar input { flex: 1; background: transparent; border: none; outline: none; font-size: 14px; font-family: 'Inter', sans-serif; color: #111827; padding: 0; width: 0; caret-color: #6366f1; }
-        .cmd-bar input::placeholder { color: #c4bfb8; }
-        .cmd-kbd { display: flex; align-items: center; gap: 3px; font-size: 11px; color: #c4bfb8; flex-shrink: 0; }
+        .cmd-wrap { margin-bottom: 24px; }
+        .cmd-bar { display: flex; align-items: center; gap: 10px; padding: 0; border-bottom: 1.5px solid #e5e7eb; padding-bottom: 10px; }
+        .cmd-bar-icon { color: #6366f1; flex-shrink: 0; }
+        .cmd-bar input { flex: 1; background: transparent; border: none; outline: none; font-size: 16px; font-weight: 500; font-family: 'Inter', sans-serif; color: #111827; padding: 0; width: 0; caret-color: #6366f1; }
+        .cmd-bar input::placeholder { color: #d1d5db; font-weight: 400; }
+        .cmd-kbd { display: flex; align-items: center; gap: 3px; font-size: 11px; color: #d1d5db; flex-shrink: 0; }
         .cmd-key { background: #f4f3ef; border: 1px solid #e5e3de; border-radius: 4px; padding: 2px 5px; font-size: 11px; font-family: 'Inter', sans-serif; color: #9ca3af; }
         .cmd-run { background: #6366f1; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; flex-shrink: 0; }
         .cmd-run:hover { background: #4f46e5; }
         .cmd-run:disabled { background: #f4f3ef; color: #c4bfb8; cursor: default; }
-        .cmd-divider { height: 1px; background: #f0efe9; margin: 0 16px; }
-        .cmd-footer { padding: 9px 16px; display: flex; align-items: center; gap: 8px; }
-        .cmd-footer-label { font-size: 11px; color: #c4bfb8; white-space: nowrap; flex-shrink: 0; }
+        .cmd-divider { display: none; }
+        .cmd-footer { padding: 6px 0 0; display: flex; align-items: center; gap: 8px; }
+        .cmd-footer-label { font-size: 11px; color: #d1d5db; white-space: nowrap; flex-shrink: 0; }
         .cmd-ticker { height: 16px; overflow: hidden; flex: 1; cursor: pointer; }
         .cmd-ticker-inner { font-size: 11px; color: #9ca3af; line-height: 16px; transition: color 0.15s; }
         .cmd-ticker-inner:hover { color: #6b7280; }
@@ -114,10 +114,10 @@
         .stat-sparkline { flex-shrink: 0; }
 
         /* ── GREETING BANNER ── */
-        .dash-greeting { background: linear-gradient(135deg, #fffbeb 0%, #fff7ed 60%, #ffffff 100%); border: 1px solid #fde68a; border-radius: 12px; padding: 20px 24px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .dash-greeting-label { font-size: 12px; color: #b45309; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-        .dash-greeting-name { font-size: 22px; font-weight: 700; color: #111827; letter-spacing: -0.5px; }
-        .dash-greeting-sub { font-size: 12px; color: #6b7280; margin-top: 3px; }
+        .dash-greeting { padding: 4px 0 20px; margin-bottom: 4px; }
+        .dash-greeting-label { font-size: 11px; color: #6366f1; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+        .dash-greeting-name { font-size: 26px; font-weight: 700; color: #111827; letter-spacing: -0.5px; }
+        .dash-greeting-sub { font-size: 13px; color: #9ca3af; margin-top: 4px; }
 
         /* ── FILTER TABS ── */
         .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
@@ -396,15 +396,9 @@
 
                     <!-- Greeting -->
                     <div class="dash-greeting">
-                        <div>
-                            <div class="dash-greeting-label">Bonjour,</div>
-                            <div class="dash-greeting-name">Timeo</div>
-                            <div class="dash-greeting-sub">Voici un résumé de votre activité de prospection</div>
-                        </div>
-                        <button class="btn btn-cta" onclick="document.getElementById('dash-search-input').focus()">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                            Lancer une recherche
-                        </button>
+                        <div class="dash-greeting-label">Bonjour,</div>
+                        <div class="dash-greeting-name">Timéo</div>
+                        <div class="dash-greeting-sub">Voici un résumé de votre activité de prospection</div>
                     </div>
 
                     <!-- Command bar -->
