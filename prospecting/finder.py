@@ -399,51 +399,54 @@ class ProspectFinder:
         self,
         sectors: List[str],
         cities: List[str],
-        max_per_combo: int = 50,
+        max_per_combo: int = 20,
         no_website_only: bool = False,
         max_score: int = 65,
     ) -> List[Dict]:
         """
-        Scrape, score websites, and return only prospects worth contacting:
-        - no_website_only=True  → only businesses with zero web presence
-        - max_score=65 (default) → no website (0) OR mediocre site (1-65)
+        Trouve exactement max_per_combo prospects QUALIFIÉS (mauvais site ou sans site).
+        On cherche jusqu'à 4× plus de candidats pour atteindre le quota demandé.
         """
-        all_results = []
+        # On cherche beaucoup plus large pour avoir assez de qualifiés après filtrage
+        fetch_count = min(max_per_combo * 4, 100)
+        all_candidates = []
         seen: set = set()
 
         for sector in sectors:
             for city in cities:
-                logger.info(f"Recherche: {sector} à {city}")
+                logger.info(f"Recherche: {sector} à {city} (cible={max_per_combo}, fetch={fetch_count})")
 
                 if GOOGLE_PLACES_API_KEY:
-                    results = self.search_google_places(sector, city, max_per_combo)
+                    results = self.search_google_places(sector, city, fetch_count)
                 else:
-                    results = self.search_pagesjaunes(sector, city, max_per_combo)
+                    results = self.search_pagesjaunes(sector, city, fetch_count)
                     if not results:
                         logger.info("Pages Jaunes vide, fallback DuckDuckGo")
-                        results = self.search_via_ddg(sector, city, max_per_combo)
+                        results = self.search_via_ddg(sector, city, fetch_count)
 
                 for r in results:
                     key = (r['name'].lower().strip(), city.lower())
                     if key not in seen:
                         seen.add(key)
-                        all_results.append(r)
+                        all_candidates.append(r)
 
                 time.sleep(0.8)
 
-        logger.info(f"Analyse des sites web pour {len(all_results)} résultats...")
-        all_results = self.score_websites(all_results)
+        logger.info(f"Analyse des sites web pour {len(all_candidates)} candidats...")
+        all_candidates = self.score_websites(all_candidates)
 
-        # Filter by website quality
+        # Filtre qualité site
         if no_website_only:
-            all_results = [r for r in all_results if not r.get('website') or r.get('website_score', 0) == 0]
+            qualified = [r for r in all_candidates if not r.get('website') or r.get('website_score', 0) == 0]
         else:
-            # Default: keep only those with no site OR bad site
-            all_results = [r for r in all_results if r.get('website_score', 0) <= max_score]
+            qualified = [r for r in all_candidates if r.get('website_score', 0) <= max_score]
 
-        logger.info(f"{len(all_results)} prospects retenus après filtrage qualité site")
+        logger.info(f"{len(qualified)}/{len(all_candidates)} qualifiés — on en retourne {min(len(qualified), max_per_combo)}")
 
-        # Enrich contact info from websites (for those with sites worth noting)
-        all_results = self.enrich_contacts(all_results)
+        # On tronque au quota demandé
+        qualified = qualified[:max_per_combo]
 
-        return all_results
+        # Enrichissement contacts uniquement sur les qualifiés retenus
+        qualified = self.enrich_contacts(qualified)
+
+        return qualified
