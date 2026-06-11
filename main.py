@@ -128,6 +128,36 @@ def prospect(sectors, max_results, dry_run, demo):
     console.print(f"[bold green]Terminé![/bold green] {saved} sauvegardés, {skipped} ignorés.")
 
 
+@cli.command()
+@click.option("--sectors", default=None, help="Secteurs séparés par des virgules")
+@click.option("--cities", default=None, help="Villes séparées par des virgules")
+@click.option("--max-results", default=20, type=int, help="Nb max de prospects par secteur/ville")
+@click.option("--output", default=None, help="Nom de base des fichiers d'export (sans extension)")
+def qualify(sectors, cities, max_results, output):
+    """Pipeline complet : recherche + qualification IA des sites + export CSV/JSON."""
+    from prospecting.prospect_qualifier import qualifier_tous_les_prospects, exporter_resultats
+
+    sector_list = [s.strip() for s in sectors.split(",")] if sectors else DEFAULT_SECTORS
+    city_list = [c.strip() for c in cities.split(",")] if cities else DEFAULT_CITIES
+
+    console.print("[bold blue]Recherche de prospects...[/bold blue]")
+    console.print(f"Secteurs: {sector_list}")
+    console.print(f"Villes: {city_list}\n")
+
+    finder = ProspectFinder()
+    results = finder.run_full_search(
+        sectors=sector_list,
+        cities=city_list,
+        max_per_combo=max_results
+    )
+
+    console.print(f"[green]{len(results)} entreprises trouvées[/green]\n")
+    console.print("[bold blue]Qualification des sites (HTML + analyse visuelle IA)...[/bold blue]\n")
+
+    qualifies = qualifier_tous_les_prospects(results)
+    exporter_resultats(qualifies, base_filename=output)
+
+
 @cli.command("validate-templates")
 @click.option("--demo", is_flag=True, help="Utiliser les templates de démo (sans API Claude)")
 def validate_templates(demo):

@@ -65,7 +65,11 @@ class EmailLog(Base):
 
 
 def get_engine():
-    return create_engine(DATABASE_URL)
+    url = DATABASE_URL
+    # Vercel Postgres envoie une URL postgres:// — SQLAlchemy 1.4+ exige postgresql://
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return create_engine(url)
 
 
 def init_db():

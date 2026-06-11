@@ -33,7 +33,7 @@ FOLLOW_UP_DELAY_DAYS = int(os.getenv("FOLLOW_UP_DELAY_DAYS", "5"))
 MAX_CONTACTS_PER_PROSPECT = int(os.getenv("MAX_CONTACTS_PER_PROSPECT", "3"))
 DAILY_EMAIL_SEND_LIMIT = int(os.getenv("DAILY_EMAIL_SEND_LIMIT", "50"))
 
-DATABASE_URL = "sqlite:///prospects.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///prospects.db")
 STATE_FILE = "state.json"
 LOG_FILE = "agent.log"
 
