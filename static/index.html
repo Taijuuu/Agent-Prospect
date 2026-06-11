@@ -411,9 +411,13 @@
                     <div class="cmd-wrap">
                         <div class="cmd-bar">
                             <svg class="cmd-bar-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                            <input type="text" id="dash-search-input" placeholder="Trouve 50 plombiers à Lyon...">
+                            <input type="text" id="dash-search-input" placeholder="Cherche 20 clients sans site web à Lyon...">
                             <div class="cmd-kbd"><span class="cmd-key">⌘</span><span class="cmd-key">K</span></div>
                             <button class="cmd-run" onclick="runAiSearch()">Lancer</button>
+                        </div>
+                        <div id="cmd-ai-reply" style="display:none;padding:8px 14px 0;font-size:12px;color:#6366f1;display:none;align-items:center;gap:6px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                            <span id="cmd-ai-reply-text"></span>
                         </div>
                         <div class="cmd-divider"></div>
                         <div class="cmd-footer">
@@ -1039,63 +1043,72 @@
             return pts;
         }
 
-        function parseSearchQuery(q) {
-            const lq = q.toLowerCase();
-            const sectorMap = {
-                plombier:'plombier', plombiers:'plombier', coiffeur:'coiffeur', coiffeurs:'coiffeur',
-                restaurant:'restaurant', restaurants:'restaurant', boulangerie:'boulangerie',
-                boulanger:'boulangerie', peinture:'peintre en bâtiment', peintre:'peintre en bâtiment',
-                'électricien':'électricien', electricien:'électricien', garage:'garage automobile',
-                mécanicien:'garage automobile', fleuriste:'fleuriste', menuisier:'menuisier',
-                charpentier:'menuisier', serrurier:'serrurier', photographe:'photographe',
-                kiné:'kiné', kinésithérapeute:'kiné', dentiste:'dentiste', architecte:'architecte',
-                comptable:'expert-comptable', avocat:'avocat', traiteur:'traiteur',
-                maçon:'maçon', carreleur:'carreleur', paysagiste:'paysagiste', couvreur:'couvreur',
-            };
-            let sector = '';
-            for (const [k, v] of Object.entries(sectorMap)) { if (lq.includes(k)) { sector = v; break; } }
+        // ── Contexte de la conversation de recherche ──────────────────────
+        let _searchContext = '';
 
-            const cityRe = /\b(paris|lyon|marseille|toulouse|nice|bordeaux|nantes|lille|strasbourg|rennes|montpellier|grenoble|nîmes|toulon|nancy|metz|rouen|caen|dijon|angers|brest|limoges|reims)\b/i;
-            const cityM = q.match(cityRe);
-            const city = cityM ? cityM[1].charAt(0).toUpperCase() + cityM[1].slice(1).toLowerCase() : '';
-            const numM = q.match(/(\d+)/);
-            const maxResults = numM ? Math.min(parseInt(numM[1]), 100) : 20;
-            const noWebsite = /sans site|pas de site|aucun site/i.test(lq);
-            const badSite = /site (medi|obsol|vieux|vieilliss|mauvais|nul|pourri)|redesign|refonte/i.test(lq);
-            // max_score: 0=sans site uniquement, 65=sans site + mauvais site (défaut)
-            const maxScore = noWebsite ? 0 : (badSite ? 50 : 65);
-            return { sector, city, maxResults, noWebsite, maxScore };
+        function _showAiReply(text) {
+            const box = document.getElementById('cmd-ai-reply');
+            document.getElementById('cmd-ai-reply-text').textContent = text;
+            box.style.display = 'flex';
+        }
+        function _hideAiReply() {
+            document.getElementById('cmd-ai-reply').style.display = 'none';
         }
 
         function runAiSearch() {
-            const query = document.getElementById('dash-search-input').value.trim();
+            const input = document.getElementById('dash-search-input');
+            const query = input.value.trim();
             if (!query) { showToast('Décris ce que tu cherches', 'error'); return; }
-            const { sector, city, maxResults, noWebsite, maxScore } = parseSearchQuery(query);
-            if (!sector || !city) {
-                showToast('Précise un secteur et une ville — ex: "30 plombiers à Lyon"', 'error');
-                return;
-            }
+
+            // Accumule le contexte conversationnel
+            _searchContext = _searchContext ? `${_searchContext}\nUtilisateur: ${query}` : query;
 
             const btn = document.querySelector('.cmd-run');
-            btn.disabled = true; btn.textContent = 'Analyse...';
-            const modeLabel = noWebsite ? ' sans site' : maxScore <= 50 ? ' site obsolète' : ' + filtre qualité site';
-            showToast(`Recherche de ${maxResults} ${sector} à ${city}${modeLabel}...`);
+            btn.disabled = true; btn.textContent = '...';
 
-            fetch(`${API_BASE}/api/search`, {
+            fetch(`${API_BASE}/api/parse-query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sector, city, max_results: maxResults, no_website_only: noWebsite, max_score: maxScore })
+                body: JSON.stringify({ query: _searchContext })
             })
             .then(r => r.json())
-            .then(d => {
-                btn.disabled = false; btn.textContent = 'Lancer';
-                if (d.success) {
-                    showToast(d.message || `${d.saved} prospects ajoutés`);
-                    updateDashboard();
-                    if (document.getElementById('prospects').classList.contains('active')) loadProspects();
-                } else showToast('Erreur: ' + (d.error || 'Inconnu'), 'error');
+            .then(parsed => {
+                if (!parsed.ready) {
+                    // Claude pose une question — on l'affiche et on attend la réponse
+                    _showAiReply(parsed.question);
+                    input.value = '';
+                    input.placeholder = parsed.question;
+                    btn.disabled = false; btn.textContent = 'Lancer';
+                    return;
+                }
+
+                // Tout est prêt — on lance la recherche
+                _hideAiReply();
+                _searchContext = ''; // reset pour la prochaine recherche
+                input.placeholder = 'Cherche 20 clients sans site web à Lyon...';
+
+                const { sector, city, max_results, no_website, max_score } = parsed;
+                const modeLabel = no_website ? ' sans site' : max_score <= 50 ? ' site obsolète' : ' + filtre qualité';
+                showToast(`Recherche de ${max_results} ${sector} à ${city}${modeLabel}...`);
+                btn.textContent = 'Analyse...';
+
+                fetch(`${API_BASE}/api/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sector, city, max_results, no_website_only: no_website, max_score })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    btn.disabled = false; btn.textContent = 'Lancer';
+                    if (d.success) {
+                        showToast(d.message || `${d.saved} prospects ajoutés`);
+                        updateDashboard();
+                        if (document.getElementById('prospects').classList.contains('active')) loadProspects();
+                    } else showToast('Erreur: ' + (d.error || 'Inconnu'), 'error');
+                })
+                .catch(e => { btn.disabled = false; btn.textContent = 'Lancer'; showToast('Erreur réseau: ' + e.message, 'error'); });
             })
-            .catch(e => { btn.disabled = false; btn.textContent = 'Lancer'; showToast('Erreur réseau: ' + e.message, 'error'); });
+            .catch(e => { btn.disabled = false; btn.textContent = 'Lancer'; showToast('Erreur IA: ' + e.message, 'error'); });
         }
 
         // ── TEMPLATES DATA ─────────────────────────────────────────────

@@ -518,6 +518,65 @@ def save_template_api(sector):
         if db:
             db.close()
 
+@app.route('/api/parse-query', methods=['POST'])
+def parse_query_api():
+    """Claude interprète une requête en langage naturel et retourne les paramètres de recherche."""
+    try:
+        from anthropic import Anthropic
+        from config import ANTHROPIC_API_KEY
+        data = request.json or {}
+        query = (data.get('query') or '').strip()
+        if not query:
+            return jsonify({'ready': False, 'question': 'Décris ce que tu cherches — secteur, ville, nombre.'})
+
+        client = Anthropic(api_key=ANTHROPIC_API_KEY)
+        system = """Tu es l'assistant de recherche de prospects d'une agence web.
+L'utilisateur décrit en langage naturel ce qu'il cherche.
+Tu dois extraire : secteur d'activité, ville française, nombre de prospects (défaut 20), filtre qualité site.
+
+Réponds UNIQUEMENT avec un JSON valide, aucun texte autour :
+{
+  "ready": true,
+  "sector": "plombier",
+  "city": "Lyon",
+  "max_results": 20,
+  "no_website": false,
+  "max_score": 65
+}
+
+Si le secteur OU la ville manque, réponds :
+{
+  "ready": false,
+  "question": "une question courte et précise pour obtenir le paramètre manquant"
+}
+
+Règles :
+- max_score=0 si l'utilisateur veut UNIQUEMENT des pros sans aucun site
+- max_score=50 si l'utilisateur veut des sites vraiment mauvais/obsolètes
+- max_score=65 (défaut) si l'utilisateur veut sans site + site de mauvaise qualité
+- max_results max = 100
+- Normalise le secteur en français minuscule (ex: "plumbers" → "plombier")
+- Si ville ambiguë ou absente, pose une question courte
+- Ne demande qu'un seul paramètre à la fois"""
+
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=256,
+            system=system,
+            messages=[{"role": "user", "content": query}]
+        )
+        text = response.content[0].text.strip()
+        import re as _re
+        match = _re.search(r'\{.*\}', text, _re.DOTALL)
+        if not match:
+            return jsonify({'ready': False, 'question': 'Je n\'ai pas compris, reformule ta recherche.'})
+        result = json.loads(match.group(0))
+        return jsonify(result)
+    except Exception as e:
+        print(f"Erreur /api/parse-query: {e}")
+        return jsonify({'ready': False, 'question': 'Précise le secteur et la ville — ex: "20 plombiers à Lyon"'})
+
+
 @app.route('/api/test')
 def test_api():
     return jsonify({'status': 'ok', 'message': 'API is working'})
