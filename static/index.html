@@ -329,7 +329,7 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <div class="logo">
+            <div class="logo" onclick="switchPage('dashboard')" style="cursor:pointer;" title="Retour à l'accueil">
                 <img src="/static/logo.svg" alt="ProspectIA" style="height:32px;width:auto;">
             </div>
 
@@ -365,12 +365,35 @@
                 </div>
             </ul>
 
-            <div class="sidebar-footer">
+            <div class="sidebar-footer" onclick="openPreferences()">
                 <div class="sidebar-avatar">TD</div>
                 <div class="sidebar-user-info">
-                    <div class="sidebar-user-name">Timeo Debray</div>
+                    <div class="sidebar-user-name">Timéo Debray</div>
                     <div class="sidebar-user-plan">Pro · lymerestd@gmail.com</div>
                 </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            </div>
+
+            <!-- Preferences panel -->
+            <div id="prefs-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:1000;" onclick="closePreferences()"></div>
+            <div id="prefs-panel" style="display:none;position:fixed;bottom:60px;left:14px;width:300px;background:#fff;border:1px solid #eae9e4;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:1001;padding:20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                    <div style="font-size:14px;font-weight:700;color:#111827;">Préférences de recherche</div>
+                    <button onclick="closePreferences()" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:18px;line-height:1;">×</button>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Secteur par défaut</label>
+                    <input id="pref-sector" type="text" placeholder="ex: peintre, plombier…" style="width:100%;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;" oninput="savePreferences()">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Ville par défaut</label>
+                    <input id="pref-city" type="text" placeholder="ex: Lyon, Paris…" style="width:100%;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;" oninput="savePreferences()">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Nombre de prospects par défaut</label>
+                    <input id="pref-max" type="number" min="5" max="100" value="20" style="width:100%;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;" oninput="savePreferences()">
+                </div>
+                <div style="font-size:11px;color:#9ca3af;line-height:1.5;">Ces préférences sont utilisées comme contexte par défaut quand tu lances une recherche.</div>
             </div>
         </div>
 
@@ -1035,6 +1058,33 @@
         // ── Contexte de la conversation de recherche ──────────────────────
         let _searchContext = '';
 
+        // ── PREFERENCES ───────────────────────────────────────────────────
+        function loadPreferences() {
+            const p = JSON.parse(localStorage.getItem('prefs') || '{}');
+            if (p.sector) document.getElementById('pref-sector').value = p.sector;
+            if (p.city)   document.getElementById('pref-city').value   = p.city;
+            if (p.max)    document.getElementById('pref-max').value    = p.max;
+        }
+        function savePreferences() {
+            localStorage.setItem('prefs', JSON.stringify({
+                sector: document.getElementById('pref-sector').value.trim(),
+                city:   document.getElementById('pref-city').value.trim(),
+                max:    document.getElementById('pref-max').value,
+            }));
+        }
+        function getPreferences() {
+            return JSON.parse(localStorage.getItem('prefs') || '{}');
+        }
+        function openPreferences() {
+            loadPreferences();
+            document.getElementById('prefs-overlay').style.display = 'block';
+            document.getElementById('prefs-panel').style.display = 'block';
+        }
+        function closePreferences() {
+            document.getElementById('prefs-overlay').style.display = 'none';
+            document.getElementById('prefs-panel').style.display = 'none';
+        }
+
         function _showAiReply(text) {
             const box = document.getElementById('cmd-ai-reply');
             document.getElementById('cmd-ai-reply-text').textContent = text;
@@ -1049,8 +1099,14 @@
             const query = input.value.trim();
             if (!query) { showToast('Décris ce que tu cherches', 'error'); return; }
 
-            // Accumule le contexte conversationnel
-            _searchContext = _searchContext ? `${_searchContext}\nUtilisateur: ${query}` : query;
+            // Accumule le contexte conversationnel + préférences
+            const prefs = getPreferences();
+            let prefCtx = '';
+            if (prefs.sector) prefCtx += `Secteur favori: ${prefs.sector}. `;
+            if (prefs.city)   prefCtx += `Ville favorite: ${prefs.city}. `;
+            if (prefs.max)    prefCtx += `Nombre par défaut: ${prefs.max}. `;
+            const fullQuery = prefCtx ? `[Préférences: ${prefCtx.trim()}] ${query}` : query;
+            _searchContext = _searchContext ? `${_searchContext}\nUtilisateur: ${query}` : fullQuery;
 
             const btn = document.querySelector('.cmd-run');
             btn.disabled = true; btn.textContent = '...';
