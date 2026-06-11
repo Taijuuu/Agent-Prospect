@@ -168,14 +168,8 @@ def search_api():
         db = get_db()
         existing_names = {p.company_name.lower().strip() for p in get_prospects(db, limit=50000)}
 
-        # Filtre : uniquement les prospects avec un email
-        results_with_email = [r for r in results if r.get('email', '').strip()]
-        skipped_no_email = len(results) - len(results_with_email)
-        if skipped_no_email:
-            print(f"[SEARCH] {skipped_no_email} prospects ignorés (pas d'email)")
-
         saved = 0
-        for business in results_with_email:
+        for business in results:
             company_name = business.get('name', '').strip()
             city_name = business.get('city', city).strip()
             if not company_name or company_name.lower() in existing_names:
@@ -218,15 +212,15 @@ def search_api():
 
         db.commit()
         db.close()
-        print(f"[SEARCH] {saved} prospects sauvegardés (avec email)")
-        msg = f"{saved} prospects avec email trouvés pour '{sector}' à {city}"
-        if skipped_no_email:
-            msg += f" ({skipped_no_email} ignorés sans email)"
+        print(f"[SEARCH] {saved} prospects sauvegardés")
+        no_email = sum(1 for r in results if not r.get('email', '').strip())
+        msg = f"{saved} prospects trouvés pour '{sector}' à {city}"
+        if no_email:
+            msg += f" (dont {no_email} sans email)"
         return jsonify({
             'success': True,
             'saved': saved,
             'total_found': len(results),
-            'skipped_no_email': skipped_no_email,
             'message': msg
         })
 
