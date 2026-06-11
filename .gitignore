@@ -45,3 +45,8 @@ wheels/
 # OS
 .DS_Store
 Thumbs.db
+.vercel
+
+# Export files
+prospects_qualifies_*.csv
+prospects_qualifies_*.json
