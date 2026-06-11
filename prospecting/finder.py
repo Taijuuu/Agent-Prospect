@@ -7,15 +7,6 @@ from loguru import logger
 
 import requests
 from bs4 import BeautifulSoup
-from config import GOOGLE_PLACES_API_KEY
-
-PLACE_DETAILS_FIELDS = "name,formatted_address,formatted_phone_number,website,rating,user_ratings_total"
-AGGREGATEURS = {
-    "pagesjaunes.fr", "travaux.com", "allovoisins.com", "habitatpresto.com",
-    "houzz.fr", "comundo.fr", "annuaire.fr", "avisverifies.com",
-    "tripadvisor.fr", "yelp.fr", "google.com", "facebook.com",
-    "instagram.com", "leboncoin.fr", "guide-artisan.fr", "plombier-prix.fr",
-}
 
 try:
     from ddgs import DDGS
@@ -276,76 +267,6 @@ class ProspectFinder:
 
         return results
 
-    # ── Google Places ─────────────────────────────────────────────────────
-
-    def _geocoder(self, location: str) -> tuple[float, float] | None:
-        resp = requests.get(
-            "https://maps.googleapis.com/maps/api/geocode/json",
-            params={"address": location, "key": GOOGLE_PLACES_API_KEY},
-            timeout=10
-        )
-        data = resp.json()
-        if not data.get("results"):
-            logger.warning(f"Geocoding échoué pour: {location}")
-            return None
-        loc = data["results"][0]["geometry"]["location"]
-        return loc["lat"], loc["lng"]
-
-    def _place_details(self, place_id: str) -> dict:
-        try:
-            resp = requests.get(
-                "https://maps.googleapis.com/maps/api/place/details/json",
-                params={"place_id": place_id, "fields": PLACE_DETAILS_FIELDS,
-                        "key": GOOGLE_PLACES_API_KEY, "language": "fr"},
-                timeout=10
-            )
-            return resp.json().get("result", {})
-        except Exception as e:
-            logger.warning(f"Place Details {place_id}: {e}")
-            return {}
-
-    def search_google_places(self, sector: str, city: str, max_results: int = 20) -> List[Dict]:
-        coords = self._geocoder(city)
-        if not coords:
-            return []
-        lat, lng = coords
-        results = []
-        params = {
-            "location": f"{lat},{lng}", "radius": 30000,
-            "keyword": sector, "language": "fr", "key": GOOGLE_PLACES_API_KEY,
-        }
-        while len(results) < max_results:
-            resp = requests.get(
-                "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-                params=params, timeout=10
-            )
-            data = resp.json()
-            for place in data.get("results", []):
-                place_id = place.get("place_id", "")
-                name = place.get("name", "").strip()
-                if not name or not place_id:
-                    continue
-                details = self._place_details(place_id)
-                phone = details.get("formatted_phone_number", "")
-                results.append({
-                    "name": name,
-                    "address": details.get("formatted_address", place.get("vicinity", "")),
-                    "phone": _clean_phone(phone) if phone else "",
-                    "website": details.get("website", ""),
-                    "email": "",
-                    "city": city,
-                    "industry": sector,
-                    "rating": details.get("rating"),
-                    "source": "google_places",
-                })
-                time.sleep(0.2)
-            next_token = data.get("next_page_token")
-            if not next_token or len(results) >= max_results:
-                break
-            time.sleep(2)
-            params = {"pagetoken": next_token, "key": GOOGLE_PLACES_API_KEY}
-        return results[:max_results]
-
     # ── Main entry point ─────────────────────────────────────────────────
     def run_full_search(
         self,
@@ -355,6 +276,11 @@ class ProspectFinder:
         no_website_only: bool = False,
         max_score: int = 65,
     ) -> List[Dict]:
+        """
+        Scrape, score websites, and return only prospects worth contacting:
+        - no_website_only=True  → only businesses with zero web presence
+        - max_score=65 (default) → no website (0) OR mediocre site (1-65)
+        """
         all_results = []
         seen: set = set()
 
@@ -362,14 +288,10 @@ class ProspectFinder:
             for city in cities:
                 logger.info(f"Recherche: {sector} à {city}")
 
-                # Priorité : Google Places → Pages Jaunes → DuckDuckGo
-                if GOOGLE_PLACES_API_KEY:
-                    results = self.search_google_places(sector, city, max_per_combo)
-                else:
-                    results = self.search_pagesjaunes(sector, city, max_per_combo)
-                    if not results:
-                        logger.info("Pages Jaunes vide, fallback DuckDuckGo")
-                        results = self.search_via_ddg(sector, city, max_per_combo)
+                results = self.search_pagesjaunes(sector, city, max_per_combo)
+                if not results:
+                    logger.info("Pages Jaunes vide, fallback DuckDuckGo")
+                    results = self.search_via_ddg(sector, city, max_per_combo)
 
                 for r in results:
                     key = (r['name'].lower().strip(), city.lower())
@@ -379,5 +301,19 @@ class ProspectFinder:
 
                 time.sleep(0.8)
 
+        logger.info(f"Analyse des sites web pour {len(all_results)} résultats...")
+        all_results = self.score_websites(all_results)
+
+        # Filter by website quality
+        if no_website_only:
+            all_results = [r for r in all_results if not r.get('website') or r.get('website_score', 0) == 0]
+        else:
+            # Default: keep only those with no site OR bad site
+            all_results = [r for r in all_results if r.get('website_score', 0) <= max_score]
+
+        logger.info(f"{len(all_results)} prospects retenus après filtrage qualité site")
+
+        # Enrich contact info from websites (for those with sites worth noting)
         all_results = self.enrich_contacts(all_results)
+
         return all_results
