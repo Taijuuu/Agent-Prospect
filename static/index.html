@@ -419,10 +419,10 @@
                             <span class="cmd-footer-label">Essaie —</span>
                             <div class="cmd-ticker" onclick="fillSearchFromTicker()">
                                 <div class="cmd-ticker-inner cmd-ticker-anim" id="cmd-ticker-text">
-                                    <div>50 plombiers à Lyon</div>
-                                    <div>30 coiffeurs à Marseille</div>
-                                    <div>20 boulangeries à Paris</div>
-                                    <div>40 électriciens à Toulouse</div>
+                                    <div>50 plombiers à Lyon sans site</div>
+                                    <div>30 coiffeurs Marseille site obsolète</div>
+                                    <div>20 restaurants Paris sans site web</div>
+                                    <div>40 électriciens Toulouse site médiocre</div>
                                 </div>
                             </div>
                         </div>
@@ -793,6 +793,11 @@
 
             <div class="pmodal-details" id="pmodal-details"></div>
 
+            <!-- Site quality panel -->
+            <div id="pmodal-site-panel" style="display:none;padding:12px 22px 0;border-bottom:1px solid #f4f3ef;">
+                <div id="pmodal-site-content"></div>
+            </div>
+
             <div class="pmodal-email-section">
                 <div class="pmodal-section-label">Email à envoyer</div>
                 <input type="text" class="pmodal-subject" id="pmodal-subject" placeholder="Objet du mail">
@@ -1055,26 +1060,30 @@
             const numM = q.match(/(\d+)/);
             const maxResults = numM ? Math.min(parseInt(numM[1]), 100) : 20;
             const noWebsite = /sans site|pas de site|aucun site/i.test(lq);
-            return { sector, city, maxResults, noWebsite };
+            const badSite = /site (medi|obsol|vieux|vieilliss|mauvais|nul|pourri)|redesign|refonte/i.test(lq);
+            // max_score: 0=sans site uniquement, 65=sans site + mauvais site (défaut)
+            const maxScore = noWebsite ? 0 : (badSite ? 50 : 65);
+            return { sector, city, maxResults, noWebsite, maxScore };
         }
 
         function runAiSearch() {
             const query = document.getElementById('dash-search-input').value.trim();
             if (!query) { showToast('Décris ce que tu cherches', 'error'); return; }
-            const { sector, city, maxResults, noWebsite } = parseSearchQuery(query);
+            const { sector, city, maxResults, noWebsite, maxScore } = parseSearchQuery(query);
             if (!sector || !city) {
                 showToast('Précise un secteur et une ville — ex: "30 plombiers à Lyon"', 'error');
                 return;
             }
 
             const btn = document.querySelector('.cmd-run');
-            btn.disabled = true; btn.textContent = 'Scraping...';
-            showToast(`Recherche de ${maxResults} ${sector} à ${city}${noWebsite ? ' sans site' : ''}...`);
+            btn.disabled = true; btn.textContent = 'Analyse...';
+            const modeLabel = noWebsite ? ' sans site' : maxScore <= 50 ? ' site obsolète' : ' + filtre qualité site';
+            showToast(`Recherche de ${maxResults} ${sector} à ${city}${modeLabel}...`);
 
             fetch(`${API_BASE}/api/search`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sector, city, max_results: maxResults, no_website_only: noWebsite })
+                body: JSON.stringify({ sector, city, max_results: maxResults, no_website_only: noWebsite, max_score: maxScore })
             })
             .then(r => r.json())
             .then(d => {
@@ -1257,6 +1266,8 @@
                 const sc = scoreColor(score);
                 const statusLabel = {new:'Nouveau', contacted:'Contacté', replied:'Répondu', converted:'Converti', unsubscribed:'Désabonné'}[p.status] || p.status;
                 const websiteHost = p.website_url ? (() => { try { return new URL(p.website_url).hostname; } catch(e) { return p.website_url; } })() : '';
+                const siteLabel = p._siteAnalysis?.label || (p.website_score === 0 ? 'Aucun site' : `Score ${p.website_score}/100`);
+                const siteLabelColor = p.website_score === 0 ? '#10b981' : p.website_score <= 30 ? '#ef4444' : p.website_score <= 50 ? '#f97316' : '#f59e0b';
                 return `<div class="pcard" onclick="openProspectModal(${p.id})">
                     <div class="pcard-header">
                         <div class="pcard-avatar ${colors[i%4]}">${ini}</div>
@@ -1276,7 +1287,7 @@
                         </div>
                     </div>
                     <div class="pcard-footer">
-                        ${verifyBadgeHtml(p._verification || null)}
+                        <span style="font-size:11px;font-weight:700;color:${siteLabelColor};">${siteLabel}</span>
                         <span style="font-size:11px;color:#9ca3af;display:flex;align-items:center;gap:4px;">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
                             Voir fiche
@@ -1294,11 +1305,21 @@
                 .then(d => {
                     document.getElementById('prospects-loading').classList.remove('show');
                     _allProspects = (d.prospects || []).map(p => {
-                        // Parse verification from notes if present
                         try {
                             if (p.notes) {
                                 const n = JSON.parse(p.notes);
                                 if (n.verification) p._verification = n.verification;
+                            }
+                        } catch(e) {}
+                        // Parse rich website analysis from website_issues field
+                        try {
+                            if (p.website_issues) {
+                                const wi = JSON.parse(p.website_issues);
+                                if (wi && typeof wi === 'object' && wi.label) {
+                                    p._siteAnalysis = wi;
+                                } else if (Array.isArray(wi)) {
+                                    p._siteAnalysis = { issues: wi, label: '', positives: [] };
+                                }
                             }
                         } catch(e) {}
                         return p;
@@ -1568,6 +1589,50 @@
                 document.getElementById('pmodal-to').textContent = 'Pas d\'adresse email';
                 document.getElementById('pmodal-send-btn').disabled = true;
                 document.getElementById('pmodal-send-btn').style.opacity = '0.4';
+            }
+
+            // Site analysis panel
+            const sitePanel = document.getElementById('pmodal-site-panel');
+            const sitePanelContent = document.getElementById('pmodal-site-content');
+            const analysis = p._siteAnalysis;
+            if (analysis || p.website_score >= 0) {
+                const score = p.website_score || 0;
+                const label = analysis?.label || (score === 0 ? 'Aucun site' : `Score ${score}/100`);
+                const scoreColor = score === 0 ? '#10b981' : score <= 30 ? '#ef4444' : score <= 50 ? '#f97316' : '#f59e0b';
+                const issues = analysis?.issues || [];
+                const positives = analysis?.positives || [];
+                const cms = analysis?.cms || '';
+                const loadTime = analysis?.load_time;
+
+                let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:12px;font-weight:700;color:${scoreColor};">${label}</span>
+                            ${cms ? `<span style="font-size:10px;background:#f3f4f6;color:#6b7280;padding:2px 7px;border-radius:4px;font-weight:600;">${cms}</span>` : ''}
+                            ${loadTime ? `<span style="font-size:10px;color:#9ca3af;">${loadTime}s</span>` : ''}
+                        </div>
+                        <div style="margin-top:5px;height:5px;background:#f3f4f6;border-radius:3px;overflow:hidden;width:100%;">
+                            <div style="height:100%;width:${score}%;background:${scoreColor};border-radius:3px;transition:width 0.6s;"></div>
+                        </div>
+                    </div>
+                    <span style="font-size:22px;font-weight:800;color:${scoreColor};">${score}</span>
+                </div>`;
+
+                if (issues.length) {
+                    html += `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
+                        ${issues.map(i => `<span style="font-size:10px;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-weight:600;">✗ ${i}</span>`).join('')}
+                    </div>`;
+                }
+                if (positives.length) {
+                    html += `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
+                        ${positives.map(p => `<span style="font-size:10px;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-weight:600;">✓ ${p}</span>`).join('')}
+                    </div>`;
+                }
+
+                sitePanelContent.innerHTML = html;
+                sitePanel.style.display = 'block';
+            } else {
+                sitePanel.style.display = 'none';
             }
 
             document.getElementById('prospect-modal').classList.add('show');

@@ -150,17 +150,20 @@ def search_api():
 
         print(f"[SEARCH] {sector} à {city} (max={max_results}, sans_site={no_website_only})")
 
+        # max_score: 0 = sans site uniquement, 65 = sans site + site médiocre
+        max_score = 0 if no_website_only else int(data.get('max_score', 65))
+
         finder = ProspectFinder()
-        analyzer = WebsiteAnalyzer()
 
         results = finder.run_full_search(
             sectors=[sector],
             cities=[city],
             max_per_combo=max_results,
             no_website_only=no_website_only,
+            max_score=max_score,
         )
 
-        print(f"[SEARCH] {len(results)} résultats trouvés, sauvegarde en cours...")
+        print(f"[SEARCH] {len(results)} prospects qualifiés, sauvegarde en cours...")
 
         db = get_db()
         existing_names = {p.company_name.lower().strip() for p in get_prospects(db, limit=50000)}
@@ -173,12 +176,21 @@ def search_api():
                 continue
 
             domain = business.get('website', '')
-            if domain and not no_website_only:
-                analysis = analyzer.analyze(domain)
-            elif not domain:
-                analysis = {"score": 0, "issues": ["Aucun site web"]}
-            else:
-                analysis = {"score": 0, "issues": ["Aucun site web"]}
+            # Use pre-computed score from finder (avoids double analysis)
+            ws_score = business.get('website_score', 0)
+            ws_issues = business.get('website_issues', ['Aucun site web'] if not domain else [])
+            ws_label = business.get('website_label', '')
+            ws_positives = business.get('website_positives', [])
+            ws_cms = business.get('website_cms', '')
+
+            # Store rich analysis in issues field as JSON
+            issues_payload = {
+                'issues': ws_issues,
+                'label': ws_label,
+                'positives': ws_positives,
+                'cms': ws_cms,
+                'load_time': business.get('load_time'),
+            }
 
             prospect_data = {
                 "company_name": company_name,
@@ -188,8 +200,8 @@ def search_api():
                 "phone": business.get('phone', ''),
                 "email": business.get('email', ''),
                 "website_url": domain or "",
-                "website_score": analysis.get("score", 0),
-                "website_issues": json.dumps(analysis.get("issues", []), ensure_ascii=False),
+                "website_score": ws_score,
+                "website_issues": json.dumps(issues_payload, ensure_ascii=False),
                 "source": business.get('source', 'search'),
                 "status": ProspectStatus.new
             }

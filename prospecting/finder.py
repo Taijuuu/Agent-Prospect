@@ -236,6 +236,37 @@ class ProspectFinder:
 
         return results
 
+    # ── Website scoring (concurrent) ─────────────────────────────────────
+    def score_websites(self, results: List[Dict], max_workers: int = 8) -> List[Dict]:
+        """Run WebsiteAnalyzer on every result concurrently."""
+        from prospecting.website_analyzer import WebsiteAnalyzer
+        analyzer = WebsiteAnalyzer()
+
+        def analyze(item):
+            idx, url = item
+            if not url:
+                return idx, {"score": 0, "label": "Aucun site", "issues": ["Aucun site web"], "positives": [], "cms": None, "load_time": None}
+            return idx, analyzer.analyze(url)
+
+        to_analyze = [(i, r.get('website', '')) for i, r in enumerate(results)]
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {ex.submit(analyze, item): item[0] for item in to_analyze}
+            for fut in concurrent.futures.as_completed(futures):
+                try:
+                    idx, analysis = fut.result(timeout=15)
+                    results[idx]['website_score'] = analysis['score']
+                    results[idx]['website_label'] = analysis.get('label', '')
+                    results[idx]['website_issues'] = analysis.get('issues', [])
+                    results[idx]['website_positives'] = analysis.get('positives', [])
+                    results[idx]['website_cms'] = analysis.get('cms')
+                    results[idx]['load_time'] = analysis.get('load_time')
+                except Exception:
+                    results[idx]['website_score'] = 0
+                    results[idx]['website_issues'] = ['Analyse impossible']
+
+        return results
+
     # ── Main entry point ─────────────────────────────────────────────────
     def run_full_search(
         self,
@@ -243,7 +274,13 @@ class ProspectFinder:
         cities: List[str],
         max_per_combo: int = 50,
         no_website_only: bool = False,
+        max_score: int = 65,
     ) -> List[Dict]:
+        """
+        Scrape, score websites, and return only prospects worth contacting:
+        - no_website_only=True  → only businesses with zero web presence
+        - max_score=65 (default) → no website (0) OR mediocre site (1-65)
+        """
         all_results = []
         seen: set = set()
 
@@ -251,10 +288,7 @@ class ProspectFinder:
             for city in cities:
                 logger.info(f"Recherche: {sector} à {city}")
 
-                # Try Pages Jaunes first
                 results = self.search_pagesjaunes(sector, city, max_per_combo)
-
-                # Fallback to DuckDuckGo if Pages Jaunes gave nothing
                 if not results:
                     logger.info("Pages Jaunes vide, fallback DuckDuckGo")
                     results = self.search_via_ddg(sector, city, max_per_combo)
@@ -265,13 +299,21 @@ class ProspectFinder:
                         seen.add(key)
                         all_results.append(r)
 
-                time.sleep(1)
+                time.sleep(0.8)
 
-        # Enrich with emails/phones from websites
-        all_results = self.enrich_contacts(all_results)
+        logger.info(f"Analyse des sites web pour {len(all_results)} résultats...")
+        all_results = self.score_websites(all_results)
 
-        # Filter: no website only
+        # Filter by website quality
         if no_website_only:
-            all_results = [r for r in all_results if not r.get('website')]
+            all_results = [r for r in all_results if not r.get('website') or r.get('website_score', 0) == 0]
+        else:
+            # Default: keep only those with no site OR bad site
+            all_results = [r for r in all_results if r.get('website_score', 0) <= max_score]
+
+        logger.info(f"{len(all_results)} prospects retenus après filtrage qualité site")
+
+        # Enrich contact info from websites (for those with sites worth noting)
+        all_results = self.enrich_contacts(all_results)
 
         return all_results
