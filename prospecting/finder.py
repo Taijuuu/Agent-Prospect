@@ -119,108 +119,86 @@ def _est_agregateur(url: str) -> bool:
 
 class ProspectFinder:
 
-    # ── Google Places API ────────────────────────────────────────────────
-    def _geocoder(self, location: str) -> tuple[float, float] | None:
-        """Convertit une ville en coordonnées (lat, lng)."""
-        try:
-            r = requests.get(
-                "https://maps.googleapis.com/maps/api/geocode/json",
-                params={"address": location, "key": GOOGLE_PLACES_API_KEY},
-                timeout=10,
-            )
-            data = r.json()
-            if data.get("status") == "OK":
-                loc = data["results"][0]["geometry"]["location"]
-                return loc["lat"], loc["lng"]
-        except Exception as e:
-            logger.warning(f"Geocoding échoué pour '{location}': {e}")
-        return None
-
-    def _place_details(self, place_id: str) -> Dict:
-        """Récupère les détails d'un lieu Google Places."""
-        try:
-            r = requests.get(
-                "https://maps.googleapis.com/maps/api/place/details/json",
-                params={"place_id": place_id, "fields": PLACE_DETAILS_FIELDS, "key": GOOGLE_PLACES_API_KEY},
-                timeout=10,
-            )
-            data = r.json()
-            if data.get("status") == "OK":
-                return data.get("result", {})
-        except Exception as e:
-            logger.warning(f"Place Details échoué: {e}")
-        return {}
+    # ── Google Places API (v1 Text Search — website inclus, pas de Details) ──
+    # Coût : $0.032 / appel (20 résultats) au lieu de $0.017 × N par Place Details
+    FIELD_MASK = "places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.id"
 
     def search_google_places(self, sector: str, city: str, max_results: int = 50) -> List[Dict]:
-        """Recherche via Google Places Nearby Search + Place Details."""
-        coords = self._geocoder(city)
-        if not coords:
-            logger.warning(f"Impossible de géocoder '{city}', fallback Pages Jaunes")
-            return []
-
-        lat, lng = coords
+        """Text Search v1 — retourne website sans appel Place Details séparé."""
         results = []
         page_token = None
+        url = "https://places.googleapis.com/v1/places:searchText"
 
         while len(results) < max_results:
-            params = {
-                "location": f"{lat},{lng}",
-                "radius": 20000,
-                "keyword": sector,
-                "language": "fr",
-                "key": GOOGLE_PLACES_API_KEY,
+            payload: Dict = {
+                "textQuery": f"{sector} {city}",
+                "languageCode": "fr",
+                "pageSize": min(20, max_results - len(results)),
             }
             if page_token:
-                params["pagetoken"] = page_token
+                payload["pageToken"] = page_token
+
+            headers = {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
+                "X-Goog-FieldMask": self.FIELD_MASK,
+            }
 
             try:
-                r = requests.get(
-                    "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-                    params=params,
-                    timeout=10,
-                )
+                r = requests.post(url, json=payload, headers=headers, timeout=10)
                 data = r.json()
-                status = data.get("status")
 
-                if status not in ("OK", "ZERO_RESULTS"):
-                    logger.error(f"Google Places: {status}")
+                if "error" in data:
+                    logger.error(f"Places v1 error: {data['error'].get('message')}")
                     break
 
-                for place in data.get("results", []):
-                    if len(results) >= max_results:
-                        break
-                    place_id = place.get("place_id")
-                    if not place_id:
-                        continue
-                    details = self._place_details(place_id)
-                    website = details.get("website", "")
+                for place in data.get("places", []):
+                    website = place.get("websiteUri", "")
                     if _est_agregateur(website):
                         continue
+                    name = place.get("displayName", {}).get("text", "")
+                    if not name:
+                        continue
                     results.append({
-                        "name": details.get("name", place.get("name", "")),
-                        "phone": details.get("formatted_phone_number", ""),
-                        "address": details.get("formatted_address", ""),
+                        "name": name,
+                        "phone": place.get("nationalPhoneNumber", ""),
+                        "address": place.get("formattedAddress", ""),
                         "website": website,
                         "email": "",
                         "city": city,
                         "industry": sector,
                         "source": "google_places",
-                        "rating": details.get("rating"),
-                        "reviews": details.get("user_ratings_total"),
+                        "rating": place.get("rating"),
+                        "reviews": place.get("userRatingCount"),
+                        "_place_id": place.get("id", ""),
                     })
-                    time.sleep(0.1)
 
-                page_token = data.get("next_page_token")
+                page_token = data.get("nextPageToken")
                 if not page_token:
                     break
-                time.sleep(2)  # Google exige ~2s avant d'utiliser next_page_token
+                time.sleep(0.5)
 
             except Exception as e:
-                logger.error(f"Google Places error: {e}")
+                logger.error(f"Places v1 error: {e}")
                 break
 
-        logger.info(f"Google Places: {len(results)} résultats pour '{sector}' à '{city}'")
+        logger.info(f"Google Places v1: {len(results)} résultats pour '{sector}' à '{city}'")
         return results[:max_results]
+
+    def _enrich_phone_from_details(self, place_id: str) -> str:
+        """Place Details uniquement pour le téléphone, sur les qualifiés seulement."""
+        try:
+            r = requests.get(
+                "https://maps.googleapis.com/maps/api/place/details/json",
+                params={"place_id": place_id, "fields": "formatted_phone_number", "key": GOOGLE_PLACES_API_KEY},
+                timeout=8,
+            )
+            data = r.json()
+            if data.get("status") == "OK":
+                return data["result"].get("formatted_phone_number", "")
+        except Exception:
+            pass
+        return ""
 
     # ── Pages Jaunes ────────────────────────────────────────────────────
     def search_pagesjaunes(self, sector: str, city: str, max_results: int = 50) -> List[Dict]:
@@ -448,5 +426,12 @@ class ProspectFinder:
 
         # Enrichissement contacts uniquement sur les qualifiés retenus
         qualified = self.enrich_contacts(qualified)
+
+        # Pour les qualifiés sans téléphone (Places v1 ne le retourne pas toujours),
+        # appel Place Details ciblé — payant mais seulement sur les 20 retenus
+        if GOOGLE_PLACES_API_KEY:
+            for p in qualified:
+                if not p.get("phone") and p.get("_place_id"):
+                    p["phone"] = self._enrich_phone_from_details(p["_place_id"])
 
         return qualified
