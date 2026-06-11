@@ -13,6 +13,22 @@ try:
 except ImportError:
     from duckduckgo_search import DDGS
 
+try:
+    from config import GOOGLE_PLACES_API_KEY
+except ImportError:
+    GOOGLE_PLACES_API_KEY = None
+
+PLACE_DETAILS_FIELDS = "name,formatted_address,formatted_phone_number,website,rating,user_ratings_total"
+
+AGGREGATEURS = {
+    "pagesjaunes.fr", "travaux.com", "allovoisins.com", "habitatpresto.com",
+    "houzz.fr", "justacoté.fr", "justacote.com", "annuaire.com",
+    "123pages.fr", "kompass.com", "societepages.fr", "societe.com",
+    "manageo.fr", "infogreffe.fr", "pappers.fr", "verif.com",
+    "tripadvisor.fr", "tripadvisor.com", "yelp.fr", "yelp.com",
+    "google.com", "facebook.com", "linkedin.com",
+}
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -93,7 +109,118 @@ def extract_contact_from_url(url: str) -> Dict:
     return {'email': email, 'phone': phone}
 
 
+def _est_agregateur(url: str) -> bool:
+    """Renvoie True si l'URL appartient à un site agrégateur (annuaire, réseau social…)."""
+    if not url:
+        return False
+    domain = urlparse(url).netloc.lower().lstrip("www.")
+    return any(domain == ag or domain.endswith("." + ag) for ag in AGGREGATEURS)
+
+
 class ProspectFinder:
+
+    # ── Google Places API ────────────────────────────────────────────────
+    def _geocoder(self, location: str) -> tuple[float, float] | None:
+        """Convertit une ville en coordonnées (lat, lng)."""
+        try:
+            r = requests.get(
+                "https://maps.googleapis.com/maps/api/geocode/json",
+                params={"address": location, "key": GOOGLE_PLACES_API_KEY},
+                timeout=10,
+            )
+            data = r.json()
+            if data.get("status") == "OK":
+                loc = data["results"][0]["geometry"]["location"]
+                return loc["lat"], loc["lng"]
+        except Exception as e:
+            logger.warning(f"Geocoding échoué pour '{location}': {e}")
+        return None
+
+    def _place_details(self, place_id: str) -> Dict:
+        """Récupère les détails d'un lieu Google Places."""
+        try:
+            r = requests.get(
+                "https://maps.googleapis.com/maps/api/place/details/json",
+                params={"place_id": place_id, "fields": PLACE_DETAILS_FIELDS, "key": GOOGLE_PLACES_API_KEY},
+                timeout=10,
+            )
+            data = r.json()
+            if data.get("status") == "OK":
+                return data.get("result", {})
+        except Exception as e:
+            logger.warning(f"Place Details échoué: {e}")
+        return {}
+
+    def search_google_places(self, sector: str, city: str, max_results: int = 50) -> List[Dict]:
+        """Recherche via Google Places Nearby Search + Place Details."""
+        coords = self._geocoder(city)
+        if not coords:
+            logger.warning(f"Impossible de géocoder '{city}', fallback Pages Jaunes")
+            return []
+
+        lat, lng = coords
+        results = []
+        page_token = None
+
+        while len(results) < max_results:
+            params = {
+                "location": f"{lat},{lng}",
+                "radius": 20000,
+                "keyword": sector,
+                "language": "fr",
+                "key": GOOGLE_PLACES_API_KEY,
+            }
+            if page_token:
+                params["pagetoken"] = page_token
+
+            try:
+                r = requests.get(
+                    "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+                    params=params,
+                    timeout=10,
+                )
+                data = r.json()
+                status = data.get("status")
+
+                if status not in ("OK", "ZERO_RESULTS"):
+                    logger.error(f"Google Places: {status}")
+                    break
+
+                for place in data.get("results", []):
+                    if len(results) >= max_results:
+                        break
+                    place_id = place.get("place_id")
+                    if not place_id:
+                        continue
+                    details = self._place_details(place_id)
+                    website = details.get("website", "")
+                    if _est_agregateur(website):
+                        continue
+                    results.append({
+                        "name": details.get("name", place.get("name", "")),
+                        "phone": details.get("formatted_phone_number", ""),
+                        "address": details.get("formatted_address", ""),
+                        "website": website,
+                        "email": "",
+                        "city": city,
+                        "industry": sector,
+                        "source": "google_places",
+                        "rating": details.get("rating"),
+                        "reviews": details.get("user_ratings_total"),
+                    })
+                    time.sleep(0.1)
+
+                page_token = data.get("next_page_token")
+                if not page_token:
+                    break
+                time.sleep(2)  # Google exige ~2s avant d'utiliser next_page_token
+
+            except Exception as e:
+                logger.error(f"Google Places error: {e}")
+                break
+
+        logger.info(f"Google Places: {len(results)} résultats pour '{sector}' à '{city}'")
+        return results[:max_results]
 
     # ── Pages Jaunes ────────────────────────────────────────────────────
     def search_pagesjaunes(self, sector: str, city: str, max_results: int = 50) -> List[Dict]:
@@ -288,10 +415,13 @@ class ProspectFinder:
             for city in cities:
                 logger.info(f"Recherche: {sector} à {city}")
 
-                results = self.search_pagesjaunes(sector, city, max_per_combo)
-                if not results:
-                    logger.info("Pages Jaunes vide, fallback DuckDuckGo")
-                    results = self.search_via_ddg(sector, city, max_per_combo)
+                if GOOGLE_PLACES_API_KEY:
+                    results = self.search_google_places(sector, city, max_per_combo)
+                else:
+                    results = self.search_pagesjaunes(sector, city, max_per_combo)
+                    if not results:
+                        logger.info("Pages Jaunes vide, fallback DuckDuckGo")
+                        results = self.search_via_ddg(sector, city, max_per_combo)
 
                 for r in results:
                     key = (r['name'].lower().strip(), city.lower())
